@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Energy Accounting</string>
+
+    <!-- Navigation -->
+    <string name="tab_daily_account">Daily Account</string>
+    <string name="tab_insights">Insights</string>
+    <string name="tab_manage">Manage &amp; Export</string>
+
+    <!-- Daily Account -->
+    <string name="today">Today</string>
+    <string name="previous_day">Previous day</string>
+    <string name="next_day">Next day</string>
+    <string name="open_calendar">Open calendar history</string>
+    <string name="total_gain">Gain (+)</string>
+    <string name="total_spend">Spend (−)</string>
+    <string name="net_balance">Net Balance</string>
+    <string name="no_entries">No entries</string>
+    <string name="add_entry">Add Entry</string>
+    <string name="edit_entry">Edit Entry</string>
+    <string name="add_entry_to_slot">Add entry to %1$s</string>
+    <string name="calendar_history">History</string>
+    <string name="close">Close</string>
+
+    <!-- Time slots -->
+    <string name="time_slot_early_morning">Early Morning</string>
+    <string name="time_slot_late_morning">Late Morning</string>
+    <string name="time_slot_afternoon">Afternoon</string>
+    <string name="time_slot_evening">Evening</string>
+
+    <!-- Entry sheet -->
+    <string name="pinned_templates">Pinned templates</string>
+    <string name="activity">Activity</string>
+    <string name="activity_placeholder">e.g. Morning routine</string>
+    <string name="situational_note">Situational note (optional)</string>
+    <string name="situational_note_placeholder">e.g. Delayed train, loud crowd</string>
+    <string name="time_slot">Time Slot</string>
+    <string name="direction_and_value">Direction &amp; Energy Value</string>
+    <string name="direction_spend">Spend (drain)</string>
+    <string name="direction_gain">Gain (recharge)</string>
+    <string name="energy_value">Energy Value</string>
+    <string name="energy_dimensions">Energy Dimensions</string>
+    <string name="dimensions_hint">First tap sets the 1° Primary dimension. Further taps add 2° Secondary dimensions.</string>
+    <string name="update_default_template">Update default template for \"%1$s\"</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="entry_deleted">Entry deleted</string>
+    <string name="undo">Undo</string>
+
+    <!-- Dimensions -->
+    <string name="dimension_physical">Physical</string>
+    <string name="dimension_cognitive">Cognitive</string>
+    <string name="dimension_sensory">Sensory</string>
+    <string name="dimension_social">Social</string>
+    <string name="dimension_emotional">Emotional</string>
+
+    <!-- Insights -->
+    <string name="last_7_days">Last 7 days</string>
+    <string name="last_30_days">Last 30 days</string>
+    <string name="custom_range">Custom range</string>
+    <string name="period_summary">Period summary</string>
+    <string name="average_daily_net">Average daily net</string>
+    <string name="active_days">Days logged</string>
+    <string name="spend_by_primary_dimension">Spend by primary dimension</string>
+    <string name="gain_by_primary_dimension">Gain by primary dimension</string>
+    <string name="secondary_dimension_occurrences">Secondary dimension occurrences</string>
+    <string name="by_time_slot">By time slot</string>
+
+    <!-- Manage & Export -->
+    <string name="activity_templates">Activity Templates</string>
+    <string name="energy_dimensions_management">Energy Dimensions</string>
+    <string name="check_in_reminders">Check-in Reminders</string>
+    <string name="appearance">Appearance</string>
+    <string name="theme_system">System</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_warm_light">Warm Light</string>
+    <string name="export_practitioner_pdf">Export Practitioner PDF Report</string>
+    <string name="export_csv">Export CSV</string>
+    <string name="export_json_backup">Export JSON Backup</string>
+    <string name="restore_json_backup">Restore JSON Backup</string>
+    <string name="restore_mode_merge">Merge without duplicates</string>
+    <string name="restore_mode_replace">Replace all local data</string>
+    <string name="add_custom_dimension">Add custom dimension</string>
+    <string name="dimension_name">Dimension name</string>
+    <string name="archive">Archive</string>
+    <string name="unarchive">Unarchive</string>
+    <string name="pin">Pin</string>
+    <string name="unpin">Unpin</string>
+    <string name="create">Create</string>
+    <string name="default_direction">Default direction</string>
+    <string name="default_value">Default energy value</string>
+    <string name="default_dimensions">Default dimensions</string>
+    <string name="reminder_slot_description">Reminds you only when %1$s has no entries yet.</string>
+    <string name="notification_channel_name">Check-in reminders</string>
+    <string name="notification_channel_description">Gentle local reminders to log entries for a time slot.</string>
+    <string name="notification_title">Time to check in</string>
+    <string name="notification_body">No entries logged for %1$s yet. Tap to add one.</string>
+    <string name="reminder_permission_rationale">Notifications let the app remind you to log entries. Without them, reminders stay silent.</string>
+    <string name="select_date_range">Select date range</string>
+    <string name="start_date">Start date</string>
+    <string name="end_date">End date</string>
+    <string name="apply">Apply</string>
+    <string name="export_failed">Export failed</string>
+    <string name="restore_complete">Backup restored</string>
+    <string name="restore_failed">Restore failed</string>
+
+    <!-- PDF report -->
+    <string name="pdf_report_title">Daily Energy Account</string>
+    <string name="pdf_period">Period: %1$s – %2$s</string>
+    <string name="pdf_column_date_slot">Date / Time Slot</string>
+    <string name="pdf_column_activity">Activity &amp; Situational Note</string>
+    <string name="pdf_column_dimensions">Dimensions (1° / 2°)</string>
+    <string name="pdf_column_value">Value</string>
+    <string name="pdf_summary_gain">Total Gain</string>
+    <string name="pdf_summary_spend">Total Spend</string>
+    <string name="pdf_summary_net">Net Balance</string>
+</resources>
