@@ -34,6 +34,12 @@ abstract class EnergyAccountingDao {
     @Query("SELECT * FROM energy_dimensions WHERE id = :dimensionId")
     abstract suspend fun getDimension(dimensionId: Long): EnergyDimensionEntity?
 
+    @Query("SELECT * FROM energy_dimensions ORDER BY colorIndex ASC, id ASC")
+    abstract suspend fun getAllDimensions(): List<EnergyDimensionEntity>
+
+    @Query("DELETE FROM energy_dimensions WHERE systemKey IS NULL")
+    abstract suspend fun deleteAllCustomDimensions(): Int
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     abstract suspend fun insertDimensions(dimensions: List<EnergyDimensionEntity>): List<Long>
 
@@ -72,6 +78,13 @@ abstract class EnergyAccountingDao {
 
     @Query("SELECT DISTINCT dateIso FROM entries ORDER BY dateIso ASC")
     abstract fun observeActiveDates(): Flow<List<String>>
+
+    @Transaction
+    @Query("SELECT * FROM entries ORDER BY dateIso ASC, createdAtEpochMillis ASC, id ASC")
+    abstract suspend fun getAllEntriesWithDimensions(): List<EntryWithDimensions>
+
+    @Query("DELETE FROM entries")
+    abstract suspend fun deleteAllEntries()
 
     @Query("SELECT * FROM entries WHERE id = :entryId")
     abstract suspend fun getEntry(entryId: Long): EntryEntity?
@@ -132,6 +145,9 @@ abstract class EnergyAccountingDao {
 
     @Query("SELECT * FROM activity_templates")
     abstract suspend fun getTemplates(): List<ActivityTemplateEntity>
+
+    @Query("DELETE FROM activity_templates")
+    abstract suspend fun deleteAllTemplates()
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     abstract suspend fun insertTemplate(template: ActivityTemplateEntity): Long
