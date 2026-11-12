@@ -130,6 +130,9 @@ abstract class EnergyAccountingDao {
     @Query("SELECT * FROM activity_templates WHERE normalizedName = :normalizedName LIMIT 1")
     abstract suspend fun findTemplateByNormalizedName(normalizedName: String): ActivityTemplateEntity?
 
+    @Query("SELECT * FROM activity_templates")
+    abstract suspend fun getTemplates(): List<ActivityTemplateEntity>
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     abstract suspend fun insertTemplate(template: ActivityTemplateEntity): Long
 
