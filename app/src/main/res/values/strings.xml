@@ -48,6 +48,7 @@
     <string name="edit">Edit</string>
     <string name="entry_deleted">Entry deleted</string>
     <string name="undo">Undo</string>
+    <string name="delete_entry_confirmation">Delete this entry?</string>
 
     <!-- Dimensions -->
     <string name="dimension_physical">Physical</string>
@@ -84,6 +85,7 @@
     <string name="restore_mode_replace">Replace all local data</string>
     <string name="add_custom_dimension">Add custom dimension</string>
     <string name="dimension_name">Dimension name</string>
+    <string name="dimension_archived">archived</string>
     <string name="archive">Archive</string>
     <string name="unarchive">Unarchive</string>
     <string name="pin">Pin</string>
@@ -105,10 +107,19 @@
     <string name="export_failed">Export failed</string>
     <string name="restore_complete">Backup restored</string>
     <string name="restore_failed">Restore failed</string>
+    <string name="template_name_in_use">A template with this name already exists</string>
 
     <!-- PDF report -->
     <string name="pdf_report_title">Daily Energy Account</string>
-    <string name="pdf_period">Period: %1$s – %2$s</string>
+    <string name="pdf_period_label">Period</string>
+    <string name="pdf_period_summary">Period summary</string>
+    <string name="pdf_days_logged">Days logged</string>
+    <string name="pdf_average_daily_net">Average daily net</string>
+    <string name="pdf_spend_by_primary">Spend by primary dimension</string>
+    <string name="pdf_gain_by_primary">Gain by primary dimension</string>
+    <string name="pdf_secondary_occurrences">Secondary dimension occurrences</string>
+    <string name="pdf_by_time_slot">By time slot</string>
+    <string name="pdf_daily_totals">Daily totals</string>
     <string name="pdf_column_date_slot">Date / Time Slot</string>
     <string name="pdf_column_activity">Activity &amp; Situational Note</string>
     <string name="pdf_column_dimensions">Dimensions (1° / 2°)</string>

@@ -153,6 +153,13 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
     }
 
     suspend fun saveTemplate(template: ActivityTemplate): Long = db.withTransaction {
+        val existing = dao.findTemplateByNormalizedName(template.normalizedName)
+        if (existing != null && existing.id != template.id) {
+            throw IllegalArgumentException(
+                "A template for '${template.activityName}' already exists"
+            )
+        }
+
         val entity = template.toEntity()
         if (template.id == 0L) {
             dao.insertTemplate(entity)

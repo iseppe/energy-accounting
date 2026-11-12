@@ -48,6 +48,7 @@
     <string name="edit">Modifica</string>
     <string name="entry_deleted">Voce eliminata</string>
     <string name="undo">Annulla</string>
+    <string name="delete_entry_confirmation">Eliminare questa voce?</string>
 
     <!-- Dimensions -->
     <string name="dimension_physical">Fisico</string>
@@ -84,6 +85,7 @@
     <string name="restore_mode_replace">Sostituisci tutti i dati locali</string>
     <string name="add_custom_dimension">Aggiungi dimensione personalizzata</string>
     <string name="dimension_name">Nome della dimensione</string>
+    <string name="dimension_archived">archiviata</string>
     <string name="archive">Archivia</string>
     <string name="unarchive">Ripristina</string>
     <string name="pin">Fissa</string>
@@ -105,10 +107,19 @@
     <string name="export_failed">Esportazione non riuscita</string>
     <string name="restore_complete">Backup ripristinato</string>
     <string name="restore_failed">Ripristino non riuscito</string>
+    <string name="template_name_in_use">Esiste già un modello con questo nome</string>
 
     <!-- PDF report -->
     <string name="pdf_report_title">Bilancio energetico giornaliero</string>
-    <string name="pdf_period">Periodo: %1$s – %2$s</string>
+    <string name="pdf_period_label">Periodo</string>
+    <string name="pdf_period_summary">Riepilogo del periodo</string>
+    <string name="pdf_days_logged">Giorni registrati</string>
+    <string name="pdf_average_daily_net">Saldo medio giornaliero</string>
+    <string name="pdf_spend_by_primary">Consumo per dimensione primaria</string>
+    <string name="pdf_gain_by_primary">Guadagno per dimensione primaria</string>
+    <string name="pdf_secondary_occurrences">Occorrenze delle dimensioni secondarie</string>
+    <string name="pdf_by_time_slot">Per fascia oraria</string>
+    <string name="pdf_daily_totals">Totali giornalieri</string>
     <string name="pdf_column_date_slot">Data / Fascia oraria</string>
     <string name="pdf_column_activity">Attività e nota situazionale</string>
     <string name="pdf_column_dimensions">Dimensioni (1° / 2°)</string>

@@ -17,12 +17,12 @@ import java.time.ZonedDateTime
  * it, otherwise falls back to `setAndAllowWhileIdle`, which may drift by a few minutes but
  * never needs extra permission.
  */
-class ReminderScheduler(private val context: Context) {
+open class ReminderScheduler(private val context: Context) {
 
     private val alarmManager: AlarmManager =
         context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    fun scheduleOrCancel(reminder: CheckInReminder, now: ZonedDateTime = ZonedDateTime.now()) {
+    open fun scheduleOrCancel(reminder: CheckInReminder, now: ZonedDateTime = ZonedDateTime.now()) {
         val pendingIntent = pendingIntentFor(reminder.timeSlot)
 
         if (!reminder.isEnabled) {

@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Mutex
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalTime
@@ -62,6 +63,11 @@ class DailyAccountViewModel(
 
     private val _draftState = MutableStateFlow<EntryDraftState?>(null)
     val draftState: StateFlow<EntryDraftState?> = _draftState.asStateFlow()
+
+    private val _isSaving = MutableStateFlow(false)
+    val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
+
+    private val saveMutex = Mutex()
 
     private val _isCalendarOpen = MutableStateFlow(false)
     val isCalendarOpen: StateFlow<Boolean> = _isCalendarOpen.asStateFlow()
@@ -116,6 +122,7 @@ class DailyAccountViewModel(
 
     fun openNewEntrySheet(preferredSlot: TimeSlot? = null) {
         editingEntry = null
+        _isCalendarOpen.value = false
         val isToday = _selectedDate.value == today
         val timeSlot = preferredSlot ?: if (isToday) {
             TimeSlot.defaultForTime(LocalTime.now(clock))
@@ -127,6 +134,9 @@ class DailyAccountViewModel(
 
     fun openEditEntrySheet(entry: Entry) {
         editingEntry = entry
+        _isCalendarOpen.value = false
+        val normalizedName = entry.activity.trim().lowercase(Locale.ROOT)
+        val template = templates.value.firstOrNull { it.normalizedName == normalizedName }
         _draftState.value = EntryDraftState(
             editingEntryId = entry.id,
             timeSlot = entry.timeSlot,
@@ -138,6 +148,7 @@ class DailyAccountViewModel(
                 primaryId = entry.primaryDimension.id,
                 secondaryIds = entry.secondaryDimensions.map { it.id }.toSet(),
             ),
+            matchedTemplate = template,
         )
     }
 
@@ -207,39 +218,46 @@ class DailyAccountViewModel(
     }
 
     /**
-     * Persists the draft and closes the sheet. A blank activity is a no-op, so the Save
-     * button and the caller disagreeing never crashes.
+     * Persists the draft and closes the sheet.
+     *
+     * A blank activity or a missing primary dimension is a no-op (the sheet stays open),
+     * and a second concurrent call is ignored, so a double tap cannot insert twice.
      */
     suspend fun saveDraft() {
-        val draft = _draftState.value ?: return
-        val activity = draft.activity.trim()
-        if (activity.isEmpty()) return
+        if (!saveMutex.tryLock()) return
+        _isSaving.value = true
+        try {
+            val draft = _draftState.value ?: return
+            val activity = draft.activity.trim()
+            if (activity.isEmpty()) return
 
-        val availableDimensions = repo.observeActiveDimensions().first()
-        val primaryDimension = draft.dimensionChoice.primaryId
-            ?.let { id -> availableDimensions.firstOrNull { it.id == id } }
-            ?: availableDimensions.firstOrNull()
-            ?: return
-        val secondaryDimensions = draft.dimensionChoice.secondaryIds.mapNotNull { id ->
-            availableDimensions.firstOrNull { it.id == id }
+            val primaryId = draft.dimensionChoice.primaryId ?: return
+            val availableDimensions = repo.getAllDimensions()
+            val primaryDimension = availableDimensions.firstOrNull { it.id == primaryId } ?: return
+            val secondaryDimensions = draft.dimensionChoice.secondaryIds.mapNotNull { id ->
+                availableDimensions.firstOrNull { it.id == id }
+            }
+
+            val entry = Entry(
+                id = draft.editingEntryId ?: 0L,
+                date = _selectedDate.value,
+                timeSlot = draft.timeSlot,
+                activity = activity,
+                situationalNote = draft.situationalNote.takeIf { it.isNotBlank() },
+                direction = draft.direction,
+                energyValue = draft.energyValue.coerceIn(Entry.MIN_ENERGY_VALUE, Entry.MAX_ENERGY_VALUE),
+                primaryDimension = primaryDimension,
+                secondaryDimensions = secondaryDimensions,
+                createdAtEpochMillis = editingEntry?.createdAtEpochMillis ?: clock.millis(),
+            )
+
+            repo.saveEntry(entry, updateTemplateDefaults = draft.updateTemplateDefaults)
+            editingEntry = null
+            _draftState.value = null
+        } finally {
+            _isSaving.value = false
+            saveMutex.unlock()
         }
-
-        val entry = Entry(
-            id = draft.editingEntryId ?: 0L,
-            date = _selectedDate.value,
-            timeSlot = draft.timeSlot,
-            activity = activity,
-            situationalNote = draft.situationalNote.takeIf { it.isNotBlank() },
-            direction = draft.direction,
-            energyValue = draft.energyValue.coerceIn(Entry.MIN_ENERGY_VALUE, Entry.MAX_ENERGY_VALUE),
-            primaryDimension = primaryDimension,
-            secondaryDimensions = secondaryDimensions,
-            createdAtEpochMillis = editingEntry?.createdAtEpochMillis ?: clock.millis(),
-        )
-
-        repo.saveEntry(entry, updateTemplateDefaults = draft.updateTemplateDefaults)
-        editingEntry = null
-        _draftState.value = null
     }
 
     suspend fun deleteEntry(entryId: Long) {

@@ -63,6 +63,7 @@ internal fun AddEditEntrySheet(
     onApplyTemplate: (ActivityTemplate) -> Unit,
     onUpdateTemplateDefaultsChange: (Boolean) -> Unit,
     onSave: () -> Unit,
+    isSaving: Boolean = false,
     onDelete: (() -> Unit)?,
 ) {
     val colors = LocalEmpathieColors.current
@@ -220,7 +221,9 @@ internal fun AddEditEntrySheet(
 
             Button(
                 onClick = onSave,
-                enabled = draft.activity.isNotBlank(),
+                enabled = draft.activity.isNotBlank() &&
+                    draft.dimensionChoice.primaryId != null &&
+                    !isSaving,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.save))

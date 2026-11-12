@@ -30,8 +30,9 @@ class PractitionerPdfGenerator {
         endDate: LocalDate,
         accounts: List<DailyAccount>,
         insights: PeriodInsights,
+        labels: PdfLabels = PdfLabels.english,
     ) {
-        val lines = buildLines(startDate, endDate, accounts, insights)
+        val lines = buildLines(startDate, endDate, accounts, insights, labels)
         PdfTextDocument.write(outputStream, lines)
     }
 
@@ -40,6 +41,7 @@ class PractitionerPdfGenerator {
         endDate: LocalDate,
         accounts: List<DailyAccount>,
         insights: PeriodInsights,
+        labels: PdfLabels,
     ): List<PdfLine> {
         val lines = mutableListOf<PdfLine>()
 
@@ -47,8 +49,8 @@ class PractitionerPdfGenerator {
             wrap(text, maxChars = MAX_BODY_CHARS).forEach { lines += PdfLine(it, style) }
         }
 
-        add("Daily Energy Account", PdfStyle.TITLE)
-        add("Period: ${EnergyFormatter.formatDate(startDate)} - ${EnergyFormatter.formatDate(endDate)}")
+        add(labels.title, PdfStyle.TITLE)
+        add("${labels.periodLabel}: ${EnergyFormatter.formatDate(startDate)} - ${EnergyFormatter.formatDate(endDate)}")
         lines += PdfLine("")
 
         accounts.forEach { account ->
@@ -57,7 +59,8 @@ class PractitionerPdfGenerator {
                 val ledger = account.ledgerFor(timeSlot)
                 if (ledger.entries.isEmpty()) return@forEach
                 add(
-                    "${slotLabel(timeSlot)}  (net ${EnergyFormatter.formatNetBalance(ledger.netBalance)})",
+                    "${labels.timeSlotNames[timeSlot] ?: timeSlot.name}  " +
+                        "(${labels.net} ${EnergyFormatter.formatNetBalance(ledger.netBalance)})",
                     PdfStyle.HEADING,
                 )
                 ledger.entries.forEach { entry ->
@@ -74,41 +77,43 @@ class PractitionerPdfGenerator {
                 }
             }
             add(
-                "Daily totals: gain +${account.totalGain} | spend -${account.totalSpend} | " +
-                    "net ${EnergyFormatter.formatNetBalance(account.netBalance)}",
+                "${labels.dailyTotals}: ${labels.gain} +${account.totalGain} | " +
+                    "${labels.spend} -${account.totalSpend} | " +
+                    "${labels.net} ${EnergyFormatter.formatNetBalance(account.netBalance)}",
                 PdfStyle.HEADING,
             )
             lines += PdfLine("")
         }
 
-        add("Period summary", PdfStyle.HEADING)
-        add("Days logged: ${insights.activeDaysCount}")
-        add("Total gain: +${insights.totalGain}")
-        add("Total spend: -${insights.totalSpend}")
-        add("Net balance: ${EnergyFormatter.formatNetBalance(insights.netBalance)}")
-        add("Average daily net: ${EnergyFormatter.formatNetBalance(insights.averageDailyNet)}")
+        add(labels.periodSummary, PdfStyle.HEADING)
+        add("${labels.daysLogged}: ${insights.activeDaysCount}")
+        add("${labels.totalGain}: +${insights.totalGain}")
+        add("${labels.totalSpend}: -${insights.totalSpend}")
+        add("${labels.netBalance}: ${EnergyFormatter.formatNetBalance(insights.netBalance)}")
+        add("${labels.averageDailyNet}: ${EnergyFormatter.formatNetBalance(insights.averageDailyNet)}")
         lines += PdfLine("")
 
-        add("Spend by primary dimension", PdfStyle.HEADING)
+        add(labels.spendByPrimaryDimension, PdfStyle.HEADING)
         insights.byDimension
             .filter { it.primarySpend > 0 }
             .forEach { add("   ${it.dimension.name}: ${it.primarySpend} (${it.primarySpendSharePercent}%)") }
 
-        add("Gain by primary dimension", PdfStyle.HEADING)
+        add(labels.gainByPrimaryDimension, PdfStyle.HEADING)
         insights.byDimension
             .filter { it.primaryGain > 0 }
             .forEach { add("   ${it.dimension.name}: ${it.primaryGain} (${it.primaryGainSharePercent}%)") }
 
-        add("Secondary dimension occurrences", PdfStyle.HEADING)
+        add(labels.secondaryDimensionOccurrences, PdfStyle.HEADING)
         insights.byDimension
             .filter { it.secondaryOccurrenceCount > 0 }
             .forEach { add("   ${it.dimension.name}: ${it.secondaryOccurrenceCount}") }
 
-        add("By time slot", PdfStyle.HEADING)
+        add(labels.byTimeSlot, PdfStyle.HEADING)
         insights.byTimeSlot.forEach {
             add(
-                "   ${slotLabel(it.timeSlot)}: gain +${it.totalGain} | spend -${it.totalSpend} | " +
-                    "net ${EnergyFormatter.formatNetBalance(it.netBalance)}"
+                "   ${labels.timeSlotNames[it.timeSlot] ?: it.timeSlot.name}: " +
+                    "${labels.gain} +${it.totalGain} | ${labels.spend} -${it.totalSpend} | " +
+                    "${labels.net} ${EnergyFormatter.formatNetBalance(it.netBalance)}"
             )
         }
 
@@ -133,13 +138,6 @@ class PractitionerPdfGenerator {
         }
         if (current.isNotEmpty()) result += current.toString()
         return result.ifEmpty { listOf("") }
-    }
-
-    private fun slotLabel(timeSlot: TimeSlot): String = when (timeSlot) {
-        TimeSlot.EARLY_MORNING -> "Early Morning"
-        TimeSlot.LATE_MORNING -> "Late Morning"
-        TimeSlot.AFTERNOON -> "Afternoon"
-        TimeSlot.EVENING -> "Evening"
     }
 
     private enum class PdfStyle { TITLE, HEADING, BODY }
@@ -314,10 +312,12 @@ class PractitionerPdfGenerator {
                     '\n', '\r' -> append(' ')
                     else -> when {
                         character.code in 32..126 -> append(character)
-                        character == '°' -> append("deg")
+                        // WinAnsi high range: Italian accents (à è é ì ò ù) and the degree sign.
+                        character.code in 160..255 -> append(character)
                         character == '—' || character == '–' -> append('-')
                         character == '’' -> append('\'')
                         character == '“' || character == '”' -> append('"')
+                        character == '…' -> append("...")
                         else -> append('?')
                     }
                 }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.empathie.energyaccounting.data.export.BackupSerializer
 import com.empathie.energyaccounting.data.export.CsvExporter
+import com.empathie.energyaccounting.data.export.PdfLabels
 import com.empathie.energyaccounting.data.export.PractitionerPdfGenerator
 import com.empathie.energyaccounting.data.export.RestoreMode
 import com.empathie.energyaccounting.data.repository.EnergyAccountingRepository
@@ -15,12 +16,14 @@ import com.empathie.energyaccounting.domain.model.EnergyDimension
 import com.empathie.energyaccounting.domain.service.InsightsCalculator
 import com.empathie.energyaccounting.reminder.ReminderScheduler
 import com.empathie.energyaccounting.ui.theme.ThemeMode
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.time.LocalDate
 
@@ -28,6 +31,8 @@ enum class ManageMessage {
     EXPORT_FAILED,
     RESTORE_COMPLETE,
     RESTORE_FAILED,
+    TEMPLATE_NAME_IN_USE,
+    REMINDER_PERMISSION_DENIED,
 }
 
 /**
@@ -73,6 +78,10 @@ class ManageExportViewModel(
         _message.value = ManageMessage.EXPORT_FAILED
     }
 
+    fun reportReminderPermissionDenied() {
+        _message.value = ManageMessage.REMINDER_PERMISSION_DENIED
+    }
+
     suspend fun toggleTemplatePin(template: ActivityTemplate) {
         repo.toggleTemplatePin(template.id, !template.isPinned)
     }
@@ -82,7 +91,8 @@ class ManageExportViewModel(
     }
 
     suspend fun saveTemplate(template: ActivityTemplate) {
-        repo.saveTemplate(template)
+        runCatching { repo.saveTemplate(template) }
+            .onFailure { _message.value = ManageMessage.TEMPLATE_NAME_IN_USE }
     }
 
     suspend fun addCustomDimension(name: String) {
@@ -103,11 +113,19 @@ class ManageExportViewModel(
         reminderScheduler.scheduleOrCancel(reminder)
     }
 
-    suspend fun buildCsv(): ByteArray = CsvExporter.exportEntries(repo.getAllEntries()).toByteArray()
+    suspend fun buildCsv(): ByteArray = withContext(Dispatchers.IO) {
+        CsvExporter.exportEntries(repo.getAllEntries()).toByteArray()
+    }
 
-    suspend fun buildJson(): ByteArray = backupSerializer.exportJson().toByteArray()
+    suspend fun buildJson(): ByteArray = withContext(Dispatchers.IO) {
+        backupSerializer.exportJson().toByteArray()
+    }
 
-    suspend fun buildPdf(startDate: LocalDate, endDate: LocalDate): ByteArray {
+    suspend fun buildPdf(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        labels: PdfLabels,
+    ): ByteArray = withContext(Dispatchers.IO) {
         val allEntries = repo.getAllEntries()
         val inRange = allEntries.filter { !it.date.isBefore(startDate) && !it.date.isAfter(endDate) }
         val accounts = inRange
@@ -122,12 +140,17 @@ class ManageExportViewModel(
         )
 
         val output = ByteArrayOutputStream()
-        pdfGenerator.generateReport(output, startDate, endDate, accounts, insights)
-        return output.toByteArray()
+        pdfGenerator.generateReport(output, startDate, endDate, accounts, insights, labels)
+        output.toByteArray()
     }
 
     suspend fun restore(json: String, mode: RestoreMode) {
-        val result = runCatching { backupSerializer.restoreJson(json, mode) }
+        val result = withContext(Dispatchers.IO) {
+            runCatching { backupSerializer.restoreJson(json, mode) }
+        }
+        result.onSuccess { reminders ->
+            reminders.forEach { reminder -> reminderScheduler.scheduleOrCancel(reminder) }
+        }
         _message.value = if (result.isSuccess) {
             ManageMessage.RESTORE_COMPLETE
         } else {

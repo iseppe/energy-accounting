@@ -6,8 +6,14 @@ import com.empathie.energyaccounting.data.local.entity.ActivityTemplateEntity
 import com.empathie.energyaccounting.data.local.entity.EnergyDimensionEntity
 import com.empathie.energyaccounting.data.local.entity.EntryEntity
 import com.empathie.energyaccounting.data.local.entity.ReminderScheduleEntity
+import com.empathie.energyaccounting.domain.model.CheckInReminder
+import com.empathie.energyaccounting.domain.model.Direction
+import com.empathie.energyaccounting.domain.model.Entry
+import com.empathie.energyaccounting.domain.model.SystemDimensionKey
+import com.empathie.energyaccounting.domain.model.TimeSlot
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.time.LocalDate
 import java.util.Locale
 
 /**
@@ -74,13 +80,14 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
         return json.encodeToString(BackupPayload.serializer(), payload)
     }
 
-    suspend fun restoreJson(jsonString: String, mode: RestoreMode) {
+    suspend fun restoreJson(jsonString: String, mode: RestoreMode): List<CheckInReminder> {
         val payload = json.decodeFromString(BackupPayload.serializer(), jsonString)
         require(payload.schemaVersion == CURRENT_SCHEMA_VERSION) {
             "Unsupported backup schema version ${payload.schemaVersion}, expected $CURRENT_SCHEMA_VERSION"
         }
+        validate(payload)
 
-        db.withTransaction {
+        return db.withTransaction {
             val dao = db.dao()
             if (mode == RestoreMode.REPLACE) {
                 dao.deleteAllEntries()
@@ -92,6 +99,51 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
             insertTemplates(payload.templates, idMap)
             insertEntries(payload.entries, idMap, deduplicate = mode == RestoreMode.MERGE)
             applyReminders(payload.reminders)
+        }
+    }
+
+    /**
+     * Rejects a corrupt or hand-edited backup before any row is written, so a failed
+     * restore can never leave screens crashing on unparsable enum names or dates.
+     */
+    private fun validate(payload: BackupPayload) {
+        val timeSlotNames = TimeSlot.entries.map { it.name }.toSet()
+        val directionNames = Direction.entries.map { it.name }.toSet()
+        val systemKeys = SystemDimensionKey.entries.map { it.name }.toSet()
+
+        payload.dimensions.forEach { record ->
+            require(record.name.isNotBlank()) { "Dimension name must not be blank" }
+            record.systemKey?.let { key ->
+                require(key in systemKeys) { "Unknown system dimension key: $key" }
+            }
+        }
+
+        payload.templates.forEach { record ->
+            require(record.displayName.isNotBlank()) { "Template name must not be blank" }
+            require(record.defaultDirection in directionNames) {
+                "Unknown direction: ${record.defaultDirection}"
+            }
+            require(record.defaultEnergyValue in Entry.MIN_ENERGY_VALUE..Entry.MAX_ENERGY_VALUE) {
+                "Template energy value out of range: ${record.defaultEnergyValue}"
+            }
+        }
+
+        payload.entries.forEach { record ->
+            require(runCatching { LocalDate.parse(record.dateIso) }.isSuccess) {
+                "Invalid entry date: ${record.dateIso}"
+            }
+            require(record.timeSlot in timeSlotNames) { "Unknown time slot: ${record.timeSlot}" }
+            require(record.direction in directionNames) { "Unknown direction: ${record.direction}" }
+            require(record.energyValue in Entry.MIN_ENERGY_VALUE..Entry.MAX_ENERGY_VALUE) {
+                "Entry energy value out of range: ${record.energyValue}"
+            }
+            require(record.activity.isNotBlank()) { "Entry activity must not be blank" }
+        }
+
+        payload.reminders.forEach { record ->
+            require(record.timeSlot in timeSlotNames) { "Unknown time slot: ${record.timeSlot}" }
+            require(record.hour in 0..23) { "Reminder hour out of range: ${record.hour}" }
+            require(record.minute in 0..59) { "Reminder minute out of range: ${record.minute}" }
         }
     }
 
@@ -121,7 +173,8 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
                         match.copy(
                             name = record.name,
                             colorIndex = record.colorIndex,
-                            isArchived = record.isArchived,
+                            // Seeded dimensions are never archived; a backup must not hide them.
+                            isArchived = false,
                         )
                     )
                 }
@@ -209,9 +262,11 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
         }
     }
 
-    private suspend fun applyReminders(records: List<ReminderRecord>) {
+    private suspend fun applyReminders(records: List<ReminderRecord>): List<CheckInReminder> {
         val dao = db.dao()
         val locals = dao.getReminderSchedules().associateBy { it.timeSlot }
+        val applied = mutableListOf<CheckInReminder>()
+
         records.forEach { record ->
             val local = locals[record.timeSlot] ?: return@forEach
             dao.updateReminderSchedule(
@@ -222,7 +277,16 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
                     isEnabled = record.isEnabled,
                 )
             )
+            TimeSlot.entries.firstOrNull { it.name == record.timeSlot }?.let { slot ->
+                applied += CheckInReminder(
+                    timeSlot = slot,
+                    hour = record.hour,
+                    minute = record.minute,
+                    isEnabled = record.isEnabled,
+                )
+            }
         }
+        return applied
     }
 
     private fun decodeIds(csv: String): List<Long> =

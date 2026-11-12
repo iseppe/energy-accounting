@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.empathie.energyaccounting.R
+import com.empathie.energyaccounting.data.export.PdfLabels
 import com.empathie.energyaccounting.data.export.RestoreMode
 import com.empathie.energyaccounting.domain.model.ActivityTemplate
 import com.empathie.energyaccounting.domain.model.CheckInReminder
@@ -74,7 +75,9 @@ import com.empathie.energyaccounting.ui.daily.dimensionLabel
 import com.empathie.energyaccounting.ui.daily.timeSlotLabel
 import com.empathie.energyaccounting.ui.theme.LocalEmpathieColors
 import com.empathie.energyaccounting.ui.theme.ThemeMode
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import kotlin.math.roundToInt
 
@@ -103,6 +106,7 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
     var showRestoreMode by remember { mutableStateOf(false) }
     var pendingExport by remember { mutableStateOf<ExportRequest?>(null) }
     var pendingRestoreMode by remember { mutableStateOf<RestoreMode?>(null) }
+    var pendingEnableReminder by remember { mutableStateOf<CheckInReminder?>(null) }
 
     val createDocument = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("*/*")
@@ -111,25 +115,30 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
         pendingExport = null
         if (uri == null || request == null) return@rememberLauncherForActivityResult
         scope.launch {
-            val bytes = runCatching {
-                when (request.kind) {
-                    ExportKind.PDF -> viewModel.buildPdf(
-                        request.startDate ?: LocalDate.now().minusDays(6),
-                        request.endDate ?: LocalDate.now(),
-                    )
+            val bytes = withContext(Dispatchers.IO) {
+                runCatching {
+                    when (request.kind) {
+                        ExportKind.PDF -> viewModel.buildPdf(
+                            request.startDate ?: LocalDate.now().minusDays(6),
+                            request.endDate ?: LocalDate.now(),
+                            PdfLabels.from(context),
+                        )
 
-                    ExportKind.CSV -> viewModel.buildCsv()
-                    ExportKind.JSON -> viewModel.buildJson()
-                }
-            }.getOrNull()
+                        ExportKind.CSV -> viewModel.buildCsv()
+                        ExportKind.JSON -> viewModel.buildJson()
+                    }
+                }.getOrNull()
+            }
 
             if (bytes == null) {
                 viewModel.reportExportFailure()
                 return@launch
             }
-            runCatching {
-                context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
-            }.onFailure { viewModel.reportExportFailure() }
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                }.onFailure { viewModel.reportExportFailure() }
+            }
         }
     }
 
@@ -140,9 +149,11 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
         pendingRestoreMode = null
         if (uri == null || mode == null) return@rememberLauncherForActivityResult
         scope.launch {
-            val json = runCatching {
-                context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
-            }.getOrNull()
+            val json = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                }.getOrNull()
+            }
             if (json == null) {
                 viewModel.reportExportFailure()
             } else {
@@ -153,7 +164,16 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
 
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { }
+    ) { granted ->
+        val pending = pendingEnableReminder
+        pendingEnableReminder = null
+        if (pending == null) return@rememberLauncherForActivityResult
+        if (granted) {
+            scope.launch { viewModel.updateReminder(pending.copy(isEnabled = true)) }
+        } else {
+            viewModel.reportReminderPermissionDenied()
+        }
+    }
 
     LaunchedEffect(message) {
         val current = message ?: return@LaunchedEffect
@@ -161,6 +181,8 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
             ManageMessage.EXPORT_FAILED -> context.getString(R.string.export_failed)
             ManageMessage.RESTORE_COMPLETE -> context.getString(R.string.restore_complete)
             ManageMessage.RESTORE_FAILED -> context.getString(R.string.restore_failed)
+            ManageMessage.TEMPLATE_NAME_IN_USE -> context.getString(R.string.template_name_in_use)
+            ManageMessage.REMINDER_PERMISSION_DENIED -> context.getString(R.string.reminder_permission_rationale)
         }
         Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
         viewModel.consumeMessage()
@@ -237,14 +259,21 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                     ReminderRow(
                         reminder = reminder,
                         onToggle = { enabled ->
-                            if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                val granted = ContextCompat.checkSelfPermission(
+                            val needsPermission = enabled &&
+                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                ContextCompat.checkSelfPermission(
                                     context,
                                     Manifest.permission.POST_NOTIFICATIONS,
-                                ) == PackageManager.PERMISSION_GRANTED
-                                if (!granted) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                ) != PackageManager.PERMISSION_GRANTED
+
+                            if (needsPermission) {
+                                pendingEnableReminder = reminder
+                                notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                scope.launch {
+                                    viewModel.updateReminder(reminder.copy(isEnabled = enabled))
+                                }
                             }
-                            scope.launch { viewModel.updateReminder(reminder.copy(isEnabled = enabled)) }
                         },
                         onTimeChange = { hour, minute ->
                             scope.launch { viewModel.updateReminder(reminder.copy(hour = hour, minute = minute)) }
@@ -471,6 +500,14 @@ private fun TemplateEditDialog(
         mutableStateOf(template?.defaultSecondaryDimensions?.map { it.id }?.toSet() ?: emptySet<Long>())
     }
 
+    // Archived dimensions stay visible only where this template already references them,
+    // so the editor can never create a new template the Add sheet cannot represent.
+    val selectableDimensions = dimensions.filter { dimension ->
+        !dimension.isArchived ||
+            template?.defaultPrimaryDimension?.id == dimension.id ||
+            template?.defaultSecondaryDimensions?.any { it.id == dimension.id } == true
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -522,14 +559,14 @@ private fun TemplateEditDialog(
                     style = MaterialTheme.typography.labelSmall,
                 )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    dimensions.forEach { dimension ->
+                    selectableDimensions.forEach { dimension ->
                         FilterChip(
                             selected = primaryId == dimension.id,
                             onClick = {
                                 primaryId = dimension.id
                                 secondaryIds = secondaryIds - dimension.id
                             },
-                            label = { Text(dimensionLabel(context, dimension)) },
+                            label = { Text(dimensionChipLabel(context, dimension)) },
                         )
                     }
                 }
@@ -538,7 +575,7 @@ private fun TemplateEditDialog(
                     style = MaterialTheme.typography.labelSmall,
                 )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    dimensions.forEach { dimension ->
+                    selectableDimensions.forEach { dimension ->
                         FilterChip(
                             selected = dimension.id in secondaryIds,
                             enabled = dimension.id != primaryId,
@@ -549,14 +586,14 @@ private fun TemplateEditDialog(
                                     secondaryIds + dimension.id
                                 }
                             },
-                            label = { Text(dimensionLabel(context, dimension)) },
+                            label = { Text(dimensionChipLabel(context, dimension)) },
                         )
                     }
                 }
             }
         },
         confirmButton = {
-            val primary = dimensions.firstOrNull { it.id == primaryId }
+            val primary = selectableDimensions.firstOrNull { it.id == primaryId }
             TextButton(
                 enabled = name.isNotBlank() && primary != null,
                 onClick = {
@@ -568,7 +605,7 @@ private fun TemplateEditDialog(
                                 defaultDirection = direction,
                                 defaultEnergyValue = value,
                                 defaultPrimaryDimension = primary,
-                                defaultSecondaryDimensions = dimensions.filter {
+                                defaultSecondaryDimensions = selectableDimensions.filter {
                                     it.id in secondaryIds && it.id != primary.id
                                 },
                                 isPinned = template?.isPinned ?: false,
@@ -588,6 +625,16 @@ private fun TemplateEditDialog(
             }
         },
     )
+}
+
+@Composable
+private fun dimensionChipLabel(context: Context, dimension: EnergyDimension): String {
+    val name = dimensionLabel(context, dimension)
+    return if (dimension.isArchived) {
+        "$name (${context.getString(R.string.dimension_archived)})"
+    } else {
+        name
+    }
 }
 
 @Composable

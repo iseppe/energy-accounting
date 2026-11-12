@@ -4,6 +4,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.empathie.energyaccounting.data.local.EnergyAccountingDatabase
 import com.empathie.energyaccounting.data.repository.EnergyAccountingRepository
+import com.empathie.energyaccounting.domain.model.ActivityTemplate
 import com.empathie.energyaccounting.domain.model.Direction
 import com.empathie.energyaccounting.domain.model.Entry
 import com.empathie.energyaccounting.domain.model.TimeSlot
@@ -139,5 +140,40 @@ class EnergyAccountingRepositoryTest {
         // The auto-learned template for that entry also survives the archive
         val template = repo.observeTemplates().first().first { it.activityName == "Tax paperwork" }
         assertEquals("Executive Function", template.defaultPrimaryDimension.name)
+    }
+
+    @Test
+    fun `saveTemplate rejects a duplicate normalized name with a domain error`() = runTest {
+        val dims = repo.observeActiveDimensions().first()
+        val cognitive = dims.first { it.name == "Cognitive" }
+        val sensory = dims.first { it.name == "Sensory" }
+
+        repo.saveEntry(
+            Entry(
+                date = LocalDate.of(2026, 11, 12),
+                timeSlot = TimeSlot.EARLY_MORNING,
+                activity = "Morning routine",
+                situationalNote = null,
+                direction = Direction.SPEND,
+                energyValue = 30,
+                primaryDimension = cognitive,
+                createdAtEpochMillis = 1000L,
+            )
+        )
+
+        val duplicate = ActivityTemplate(
+            activityName = "  MORNING ROUTINE ",
+            defaultDirection = Direction.GAIN,
+            defaultEnergyValue = 10,
+            defaultPrimaryDimension = sensory,
+        )
+
+        val result = runCatching { repo.saveTemplate(duplicate) }
+
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        val templates = repo.observeTemplates().first()
+        assertEquals(1, templates.size)
+        assertEquals(30, templates.first().defaultEnergyValue)
+        assertEquals(cognitive.id, templates.first().defaultPrimaryDimension.id)
     }
 }

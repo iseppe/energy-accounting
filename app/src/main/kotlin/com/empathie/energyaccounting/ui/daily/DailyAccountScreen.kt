@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -34,7 +35,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,6 +68,7 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
     val account by viewModel.account.collectAsStateWithLifecycle()
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
     val draft by viewModel.draftState.collectAsStateWithLifecycle()
+    val isSaving by viewModel.isSaving.collectAsStateWithLifecycle()
     val isCalendarOpen by viewModel.isCalendarOpen.collectAsStateWithLifecycle()
     val templates by viewModel.templates.collectAsStateWithLifecycle()
     val dimensions by viewModel.dimensions.collectAsStateWithLifecycle()
@@ -71,6 +76,7 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
     val calendarNetBalances by viewModel.calendarNetBalances.collectAsStateWithLifecycle()
     val today = LocalDate.now()
     val scope = rememberCoroutineScope()
+    var pendingDeleteId by remember { mutableStateOf<Long?>(null) }
 
     Scaffold(
         topBar = {
@@ -138,8 +144,32 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
             onApplyTemplate = viewModel::applyTemplate,
             onUpdateTemplateDefaultsChange = viewModel::onUpdateTemplateDefaultsChange,
             onSave = { scope.launch { viewModel.saveDraft() } },
+            isSaving = isSaving,
             onDelete = draftState.editingEntryId?.let { entryId ->
-                { scope.launch { viewModel.deleteEntry(entryId) } }
+                { pendingDeleteId = entryId }
+            },
+        )
+    }
+
+    pendingDeleteId?.let { entryId ->
+        AlertDialog(
+            onDismissRequest = { pendingDeleteId = null },
+            title = { Text(stringResource(R.string.delete)) },
+            text = { Text(stringResource(R.string.delete_entry_confirmation)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingDeleteId = null
+                        scope.launch { viewModel.deleteEntry(entryId) }
+                    }
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteId = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
             },
         )
     }

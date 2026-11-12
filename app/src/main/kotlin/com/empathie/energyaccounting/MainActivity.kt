@@ -41,22 +41,41 @@ import com.empathie.energyaccounting.ui.manage.ManageExportScreen
 import com.empathie.energyaccounting.ui.manage.ManageExportViewModel
 import com.empathie.energyaccounting.ui.theme.EmpathieTheme
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+
+/**
+ * The Add Entry request carried by a check-in notification.
+ *
+ * A null [timeSlot] means the notification's slot name was unrecognised; the sheet then
+ * falls back to the clock-based default instead of refusing to open.
+ */
+internal data class AddSheetDeepLink(val timeSlot: TimeSlot?)
+
+internal fun Intent.toAddSheetDeepLink(): AddSheetDeepLink? {
+    if (!getBooleanExtra(CheckInReminderReceiver.EXTRA_OPEN_ADD_SHEET, false)) return null
+    val slotName = getStringExtra(CheckInReminderReceiver.EXTRA_TIME_SLOT)
+    return AddSheetDeepLink(
+        slotName?.let { name -> TimeSlot.entries.firstOrNull { it.name == name } }
+    )
+}
+
+private data class DeepLinkEvent(val id: Long, val timeSlot: TimeSlot?)
 
 /**
  * Single-activity shell with the three tabs and the notification deep link.
  *
- * A check-in notification carries the slot it fired for; opening it selects today and
- * opens the entry sheet already pointed at that slot.
+ * A tapped check-in notification switches to the Daily Account tab, selects today and
+ * opens the entry sheet already pointed at the slot that fired. Extras are consumed and
+ * the event is cleared after handling, so a rotation never replays it and a second
+ * notification for the same slot still opens a fresh sheet.
  */
 class MainActivity : ComponentActivity() {
 
-    private val deepLinkRequest = MutableStateFlow<TimeSlot?>(null)
-    private var pendingOpenAddSheet = false
+    private val deepLinkEvents = MutableStateFlow<DeepLinkEvent?>(null)
+    private var nextDeepLinkId = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        readDeepLink(intent)
+        readDeepLink(intent, isFreshLaunch = savedInstanceState == null)
 
         setContent {
             val app = application as EnergyAccountingApp
@@ -86,18 +105,21 @@ class MainActivity : ComponentActivity() {
             )
 
             val themeMode by manageViewModel.themeMode.collectAsStateWithLifecycle()
-            val pendingSlot by deepLinkRequest.asStateFlow().collectAsStateWithLifecycle()
+            val deepLink by deepLinkEvents.collectAsStateWithLifecycle()
+            var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
-            LaunchedEffect(pendingSlot) {
-                if (pendingOpenAddSheet) {
-                    pendingOpenAddSheet = false
-                    dailyViewModel.goToToday()
-                    dailyViewModel.openNewEntrySheet(pendingSlot)
-                }
+            LaunchedEffect(deepLink?.id) {
+                val event = deepLink ?: return@LaunchedEffect
+                selectedTab = 0
+                dailyViewModel.goToToday()
+                dailyViewModel.openNewEntrySheet(event.timeSlot)
+                deepLinkEvents.value = null
             }
 
             EmpathieTheme(themeMode = themeMode) {
                 AppShell(
+                    selectedTab = selectedTab,
+                    onSelectTab = { selectedTab = it },
                     dailyViewModel = dailyViewModel,
                     insightsViewModel = insightsViewModel,
                     manageViewModel = manageViewModel,
@@ -109,27 +131,28 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        readDeepLink(intent)
+        readDeepLink(intent, isFreshLaunch = true)
     }
 
-    private fun readDeepLink(intent: Intent?) {
-        if (intent == null) return
-        val shouldOpen = intent.getBooleanExtra(CheckInReminderReceiver.EXTRA_OPEN_ADD_SHEET, false)
-        if (!shouldOpen) return
-        val slotName = intent.getStringExtra(CheckInReminderReceiver.EXTRA_TIME_SLOT)
-        val slot = slotName?.let { name -> TimeSlot.entries.firstOrNull { it.name == name } }
-        pendingOpenAddSheet = true
-        deepLinkRequest.value = slot
+    private fun readDeepLink(intent: Intent?, isFreshLaunch: Boolean) {
+        val link = intent?.toAddSheetDeepLink() ?: return
+        if (isFreshLaunch) {
+            nextDeepLinkId += 1
+            deepLinkEvents.value = DeepLinkEvent(id = nextDeepLinkId, timeSlot = link.timeSlot)
+        }
+        intent.removeExtra(CheckInReminderReceiver.EXTRA_OPEN_ADD_SHEET)
+        intent.removeExtra(CheckInReminderReceiver.EXTRA_TIME_SLOT)
     }
 }
 
 @Composable
 private fun AppShell(
+    selectedTab: Int,
+    onSelectTab: (Int) -> Unit,
     dailyViewModel: DailyAccountViewModel,
     insightsViewModel: InsightsViewModel,
     manageViewModel: ManageExportViewModel,
 ) {
-    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     val tabs = listOf(
         R.string.tab_daily_account to Icons.Filled.Today,
         R.string.tab_insights to Icons.Filled.Insights,
@@ -142,7 +165,7 @@ private fun AppShell(
                 tabs.forEachIndexed { index, (labelRes, icon) ->
                     NavigationBarItem(
                         selected = selectedTab == index,
-                        onClick = { selectedTab = index },
+                        onClick = { onSelectTab(index) },
                         icon = { Icon(icon, contentDescription = null) },
                         label = { Text(stringResource(labelRes)) },
                     )

@@ -5,9 +5,11 @@ import androidx.test.core.app.ApplicationProvider
 import com.empathie.energyaccounting.data.local.EnergyAccountingDatabase
 import com.empathie.energyaccounting.data.repository.EnergyAccountingRepository
 import com.empathie.energyaccounting.domain.model.Direction
+import com.empathie.energyaccounting.domain.model.Entry
 import com.empathie.energyaccounting.domain.model.TimeSlot
 import com.empathie.energyaccounting.ui.daily.DailyAccountViewModel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.*
@@ -60,5 +62,83 @@ class DailyAccountViewModelTest {
         val account = repo.observeDailyAccount(LocalDate.of(2026, 11, 12)).first()
         assertEquals(40, account.totalGain)
         assertEquals(40, account.netBalance)
+    }
+
+    @Test
+    fun `saving without a primary dimension keeps the draft open and inserts nothing`() = runTest {
+        val vm = DailyAccountViewModel(repo, fixedClock)
+        vm.openNewEntrySheet(preferredSlot = TimeSlot.EVENING)
+        vm.onActivityChange("Unknown activity")
+
+        vm.saveDraft()
+
+        assertNotNull(vm.draftState.value)
+        val account = repo.observeDailyAccount(LocalDate.of(2026, 11, 12)).first()
+        assertEquals(0, account.slots.getValue(TimeSlot.EVENING).entries.size)
+    }
+
+    @Test
+    fun `editing an entry preserves its archived primary dimension`() = runTest {
+        val date = LocalDate.of(2026, 11, 12)
+        val customId = repo.createCustomDimension("Focus", 3)
+        val custom = repo.observeAllDimensions().first().first { it.id == customId }
+        repo.saveEntry(
+            Entry(
+                date = date,
+                timeSlot = TimeSlot.AFTERNOON,
+                activity = "Deep work",
+                situationalNote = null,
+                direction = Direction.SPEND,
+                energyValue = 60,
+                primaryDimension = custom,
+                createdAtEpochMillis = 1000L,
+            )
+        )
+        repo.removeOrArchiveCustomDimension(customId)
+
+        val vm = DailyAccountViewModel(repo, fixedClock)
+        vm.selectDate(date)
+        val entry = repo.observeDailyAccount(date).first()
+            .slots.getValue(TimeSlot.AFTERNOON).entries.first()
+
+        vm.openEditEntrySheet(entry)
+        vm.onSituationalNoteChange("Note only")
+        vm.saveDraft()
+
+        val saved = repo.observeDailyAccount(date).first()
+            .slots.getValue(TimeSlot.AFTERNOON).entries.first()
+        assertEquals(customId, saved.primaryDimension.id)
+        assertTrue(saved.primaryDimension.isArchived)
+        assertEquals("Note only", saved.situationalNote)
+    }
+
+    @Test
+    fun `openNewEntrySheet closes an open calendar sheet`() {
+        val vm = DailyAccountViewModel(repo, fixedClock)
+        vm.openCalendar()
+        assertTrue(vm.isCalendarOpen.value)
+
+        vm.openNewEntrySheet()
+
+        assertFalse(vm.isCalendarOpen.value)
+    }
+
+    @Test
+    fun `concurrent saveDraft calls insert only one entry`() = runTest {
+        val vm = DailyAccountViewModel(repo, fixedClock)
+        val dimensions = repo.observeActiveDimensions().first()
+        vm.openNewEntrySheet(preferredSlot = TimeSlot.AFTERNOON)
+        vm.onActivityChange("Quiet walk")
+        vm.onEnergyValueChange(40)
+        vm.onTapDimension(dimensions.first().id)
+
+        val first = launch { vm.saveDraft() }
+        val second = launch { vm.saveDraft() }
+        first.join()
+        second.join()
+
+        val entries = repo.observeDailyAccount(LocalDate.of(2026, 11, 12)).first()
+            .slots.getValue(TimeSlot.AFTERNOON).entries
+        assertEquals(1, entries.size)
     }
 }
