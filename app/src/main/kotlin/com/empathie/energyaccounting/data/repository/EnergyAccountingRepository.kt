@@ -6,7 +6,9 @@ import com.empathie.energyaccounting.data.local.entity.ActivityTemplateEntity
 import com.empathie.energyaccounting.data.local.entity.EnergyDimensionEntity
 import com.empathie.energyaccounting.data.local.entity.EntryEntity
 import com.empathie.energyaccounting.data.local.entity.EntryWithDimensions
+import com.empathie.energyaccounting.data.local.entity.ReminderScheduleEntity
 import com.empathie.energyaccounting.domain.model.ActivityTemplate
+import com.empathie.energyaccounting.domain.model.CheckInReminder
 import com.empathie.energyaccounting.domain.model.DailyAccount
 import com.empathie.energyaccounting.domain.model.Direction
 import com.empathie.energyaccounting.domain.model.EnergyDimension
@@ -39,6 +41,23 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
         dao.observeEntriesForDate(date.toString()).map { rows ->
             DailyAccount.fromEntries(date, rows.map { it.toDomainEntry() })
         }
+
+    fun observeEntries(startDate: LocalDate, endDate: LocalDate): Flow<List<Entry>> =
+        dao.observeEntriesInRange(startDate.toString(), endDate.toString()).map { rows ->
+            rows.map { it.toDomainEntry() }
+        }
+
+    suspend fun getAllEntries(): List<Entry> =
+        dao.getAllEntriesWithDimensions().map { it.toDomainEntry() }
+
+    suspend fun getAllDimensions(): List<EnergyDimension> =
+        dao.getAllDimensions().map { it.toDomain() }
+
+    suspend fun setDimensionArchived(dimensionId: Long, archived: Boolean) {
+        val dimension = dao.getDimension(dimensionId) ?: return
+        if (dimension.systemKey != null) return
+        dao.updateDimension(dimension.copy(isArchived = archived))
+    }
 
     fun observeActiveDimensions(): Flow<List<EnergyDimension>> =
         dao.observeActiveDimensions().map { dimensions -> dimensions.map { it.toDomain() } }
@@ -150,6 +169,23 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
     suspend fun deleteTemplate(templateId: Long) {
         dao.deleteTemplateById(templateId)
     }
+
+    fun observeReminders(): Flow<List<CheckInReminder>> =
+        dao.observeReminderSchedules().map { schedules -> schedules.mapNotNull { it.toDomainReminder() } }
+
+    suspend fun updateReminder(reminder: CheckInReminder) {
+        dao.updateReminderSchedule(
+            ReminderScheduleEntity(
+                timeSlot = reminder.timeSlot.name,
+                hour = reminder.hour,
+                minute = reminder.minute,
+                isEnabled = reminder.isEnabled,
+            )
+        )
+    }
+
+    suspend fun getReminders(): List<CheckInReminder> =
+        dao.getReminderSchedules().mapNotNull { it.toDomainReminder() }
 
     private suspend fun touchTemplate(entry: Entry, incrementUsage: Boolean, updateDefaults: Boolean) {
         val normalizedName = normalize(entry.activity)
@@ -271,4 +307,14 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
 
     private fun EntryEntity.signedValue(): Int =
         if (Direction.valueOf(direction) == Direction.GAIN) energyValue else -energyValue
+
+    private fun ReminderScheduleEntity.toDomainReminder(): CheckInReminder? {
+        val slot = TimeSlot.entries.firstOrNull { it.name == timeSlot } ?: return null
+        return CheckInReminder(
+            timeSlot = slot,
+            hour = hour,
+            minute = minute,
+            isEnabled = isEnabled,
+        )
+    }
 }

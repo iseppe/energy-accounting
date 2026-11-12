@@ -1,0 +1,165 @@
+package com.empathie.energyaccounting
+
+import android.content.Intent
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Today
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.empathie.energyaccounting.data.export.BackupSerializer
+import com.empathie.energyaccounting.data.export.PractitionerPdfGenerator
+import com.empathie.energyaccounting.domain.model.TimeSlot
+import com.empathie.energyaccounting.reminder.CheckInReminderReceiver
+import com.empathie.energyaccounting.reminder.ReminderScheduler
+import com.empathie.energyaccounting.ui.daily.DailyAccountScreen
+import com.empathie.energyaccounting.ui.daily.DailyAccountViewModel
+import com.empathie.energyaccounting.ui.insights.InsightsScreen
+import com.empathie.energyaccounting.ui.insights.InsightsViewModel
+import com.empathie.energyaccounting.ui.manage.ManageExportScreen
+import com.empathie.energyaccounting.ui.manage.ManageExportViewModel
+import com.empathie.energyaccounting.ui.theme.EmpathieTheme
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+/**
+ * Single-activity shell with the three tabs and the notification deep link.
+ *
+ * A check-in notification carries the slot it fired for; opening it selects today and
+ * opens the entry sheet already pointed at that slot.
+ */
+class MainActivity : ComponentActivity() {
+
+    private val deepLinkRequest = MutableStateFlow<TimeSlot?>(null)
+    private var pendingOpenAddSheet = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        readDeepLink(intent)
+
+        setContent {
+            val app = application as EnergyAccountingApp
+
+            val dailyViewModel: DailyAccountViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer { DailyAccountViewModel(app.repository) }
+                }
+            )
+            val insightsViewModel: InsightsViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer { InsightsViewModel(app.repository) }
+                }
+            )
+            val manageViewModel: ManageExportViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer {
+                        ManageExportViewModel(
+                            repo = app.repository,
+                            backupSerializer = BackupSerializer(app.database),
+                            pdfGenerator = PractitionerPdfGenerator(),
+                            reminderScheduler = ReminderScheduler(app),
+                            settings = app.settings,
+                        )
+                    }
+                }
+            )
+
+            val themeMode by manageViewModel.themeMode.collectAsStateWithLifecycle()
+            val pendingSlot by deepLinkRequest.asStateFlow().collectAsStateWithLifecycle()
+
+            LaunchedEffect(pendingSlot) {
+                if (pendingOpenAddSheet) {
+                    pendingOpenAddSheet = false
+                    dailyViewModel.goToToday()
+                    dailyViewModel.openNewEntrySheet(pendingSlot)
+                }
+            }
+
+            EmpathieTheme(themeMode = themeMode) {
+                AppShell(
+                    dailyViewModel = dailyViewModel,
+                    insightsViewModel = insightsViewModel,
+                    manageViewModel = manageViewModel,
+                )
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        readDeepLink(intent)
+    }
+
+    private fun readDeepLink(intent: Intent?) {
+        if (intent == null) return
+        val shouldOpen = intent.getBooleanExtra(CheckInReminderReceiver.EXTRA_OPEN_ADD_SHEET, false)
+        if (!shouldOpen) return
+        val slotName = intent.getStringExtra(CheckInReminderReceiver.EXTRA_TIME_SLOT)
+        val slot = slotName?.let { name -> TimeSlot.entries.firstOrNull { it.name == name } }
+        pendingOpenAddSheet = true
+        deepLinkRequest.value = slot
+    }
+}
+
+@Composable
+private fun AppShell(
+    dailyViewModel: DailyAccountViewModel,
+    insightsViewModel: InsightsViewModel,
+    manageViewModel: ManageExportViewModel,
+) {
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    val tabs = listOf(
+        R.string.tab_daily_account to Icons.Filled.Today,
+        R.string.tab_insights to Icons.Filled.Insights,
+        R.string.tab_manage to Icons.Filled.Settings,
+    )
+
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                tabs.forEachIndexed { index, (labelRes, icon) ->
+                    NavigationBarItem(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        icon = { Icon(icon, contentDescription = null) },
+                        label = { Text(stringResource(labelRes)) },
+                    )
+                }
+            }
+        },
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            when (selectedTab) {
+                0 -> DailyAccountScreen(dailyViewModel)
+                1 -> InsightsScreen(insightsViewModel)
+                else -> ManageExportScreen(manageViewModel)
+            }
+        }
+    }
+}
