@@ -355,7 +355,10 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
 
         item {
             SectionCard(title = stringResource(R.string.activity_templates)) {
-                TextButton(onClick = { showCreateTemplate = true }) {
+                TextButton(onClick = {
+                    haptics.tick()
+                    showCreateTemplate = true
+                }) {
                     Text(stringResource(R.string.create))
                 }
                 templates.forEach { template ->
@@ -371,7 +374,10 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
 
         item {
             SectionCard(title = stringResource(R.string.energy_dimensions_management)) {
-                TextButton(onClick = { showAddDimension = true }) {
+                TextButton(onClick = {
+                    haptics.tick()
+                    showAddDimension = true
+                }) {
                     Text(stringResource(R.string.add_custom_dimension))
                 }
                 dimensions.forEach { dimension ->
@@ -401,14 +407,16 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                                     Manifest.permission.POST_NOTIFICATIONS,
                                 ) != PackageManager.PERMISSION_GRANTED
 
-                            if (needsPermission) {
-                                pendingEnableReminder = reminder
-                                notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            } else {
-                                scope.launch {
-                                    viewModel.updateReminder(reminder.copy(isEnabled = enabled))
+                                if (needsPermission) {
+                                    haptics.tick()
+                                    pendingEnableReminder = reminder
+                                    notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                } else {
+                                    haptics.tick()
+                                    scope.launch {
+                                        viewModel.updateReminder(reminder.copy(isEnabled = enabled))
+                                    }
                                 }
-                            }
                         },
                         onTimeChange = { hour, minute ->
                             scope.launch { viewModel.updateReminder(reminder.copy(hour = hour, minute = minute)) }
@@ -418,6 +426,7 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
 
                 FilledTonalButton(
                     onClick = {
+                        haptics.tick()
                         val needsPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                             ContextCompat.checkSelfPermission(
                                 context,
@@ -439,13 +448,17 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
         item {
             SectionCard(title = stringResource(R.string.export_practitioner_pdf)) {
                 OutlinedButton(
-                    onClick = { showPdfRange = true },
+                    onClick = {
+                        haptics.tick()
+                        showPdfRange = true
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.export_practitioner_pdf))
                 }
                 OutlinedButton(
                     onClick = {
+                        haptics.tick()
                         pendingExport = ExportRequest(ExportKind.CSV)
                         createDocument.launch("energy-accounting-${LocalDate.now()}.csv")
                     },
@@ -455,6 +468,7 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                 }
                 OutlinedButton(
                     onClick = {
+                        haptics.tick()
                         pendingExport = ExportRequest(ExportKind.JSON)
                         createDocument.launch("energy-accounting-backup-${LocalDate.now()}.json")
                     },
@@ -463,7 +477,10 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                     Text(stringResource(R.string.export_json_backup))
                 }
                 OutlinedButton(
-                    onClick = { showRestoreMode = true },
+                    onClick = {
+                        haptics.tick()
+                        showRestoreMode = true
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.restore_json_backup))
@@ -669,6 +686,7 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
 
                     OutlinedButton(
                         onClick = {
+                            haptics.tick()
                             pendingExport = ExportRequest(ExportKind.DEBUG_LOG)
                             createDocument.launch("energy-accounting-debug-${LocalDate.now()}.log")
                         },
@@ -815,6 +833,7 @@ private fun DimensionRow(
 ) {
     val context = LocalContext.current
     val colors = LocalEmpathieColors.current
+    val haptics = LocalAppHaptics.current
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(dimensionLabel(context, dimension), style = MaterialTheme.typography.bodyMedium)
@@ -827,14 +846,20 @@ private fun DimensionRow(
             }
         }
         if (dimension.systemKey == null) {
-            TextButton(onClick = onToggleArchive) {
+            TextButton(onClick = {
+                haptics.tick()
+                onToggleArchive()
+            }) {
                 Text(
                     stringResource(
                         if (dimension.isArchived) R.string.unarchive else R.string.archive
                     )
                 )
             }
-            IconButton(onClick = onDelete) {
+            IconButton(onClick = {
+                haptics.tick()
+                onDelete()
+            }) {
                 Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.delete))
             }
         }
@@ -848,6 +873,7 @@ private fun ReminderRow(
     onTimeChange: (Int, Int) -> Unit,
 ) {
     val context = LocalContext.current
+    val haptics = LocalAppHaptics.current
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(
@@ -865,6 +891,7 @@ private fun ReminderRow(
         }
         TextButton(
             onClick = {
+                haptics.tick()
                 TimePickerDialog(
                     context,
                     { _, hour, minute -> onTimeChange(hour, minute) },
@@ -876,7 +903,13 @@ private fun ReminderRow(
         ) {
             Text(String.format("%02d:%02d", reminder.hour, reminder.minute))
         }
-        Switch(checked = reminder.isEnabled, onCheckedChange = onToggle)
+        Switch(
+            checked = reminder.isEnabled,
+            onCheckedChange = { enabled ->
+                haptics.tick()
+                onToggle(enabled)
+            },
+        )
     }
 }
 
@@ -952,6 +985,7 @@ private fun TemplateEditDialog(
             TextButton(
                 enabled = name.isNotBlank() && dimension != null,
                 onClick = {
+                    haptics.tick()
                     if (dimension != null) {
                         onSave(
                             ActivityTemplate(
@@ -972,7 +1006,10 @@ private fun TemplateEditDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                haptics.tick()
+                onDismiss()
+            }) {
                 Text(stringResource(R.string.cancel))
             }
         },
@@ -995,6 +1032,7 @@ private fun AddDimensionDialog(
     onSave: (String) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
+    val haptics = LocalAppHaptics.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.add_custom_dimension)) },
@@ -1007,12 +1045,18 @@ private fun AddDimensionDialog(
             )
         },
         confirmButton = {
-            TextButton(enabled = name.isNotBlank(), onClick = { onSave(name) }) {
+            TextButton(enabled = name.isNotBlank(), onClick = {
+                haptics.tick()
+                onSave(name)
+            }) {
                 Text(stringResource(R.string.create))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                haptics.tick()
+                onDismiss()
+            }) {
                 Text(stringResource(R.string.cancel))
             }
         },
@@ -1027,6 +1071,7 @@ private fun PdfRangeDialog(
 ) {
     var start by remember { mutableStateOf(LocalDate.now().minusDays(6)) }
     var end by remember { mutableStateOf(LocalDate.now()) }
+    val haptics = LocalAppHaptics.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.export_practitioner_pdf)) },
@@ -1046,16 +1091,25 @@ private fun PdfRangeDialog(
         },
         confirmButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = { onShare(start, end) }) {
+                TextButton(onClick = {
+                    haptics.tick()
+                    onShare(start, end)
+                }) {
                     Text(stringResource(R.string.share_pdf))
                 }
-                TextButton(onClick = { onSave(start, end) }) {
+                TextButton(onClick = {
+                    haptics.tick()
+                    onSave(start, end)
+                }) {
                     Text(stringResource(R.string.save_pdf))
                 }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                haptics.tick()
+                onDismiss()
+            }) {
                 Text(stringResource(R.string.cancel))
             }
         },
@@ -1087,19 +1141,26 @@ private fun RestoreModeDialog(
     onDismiss: () -> Unit,
     onChoose: (RestoreMode) -> Unit,
 ) {
+    val haptics = LocalAppHaptics.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.restore_json_backup)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
-                    onClick = { onChoose(RestoreMode.MERGE) },
+                    onClick = {
+                        haptics.tick()
+                        onChoose(RestoreMode.MERGE)
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.restore_mode_merge))
                 }
                 OutlinedButton(
-                    onClick = { onChoose(RestoreMode.REPLACE) },
+                    onClick = {
+                        haptics.tick()
+                        onChoose(RestoreMode.REPLACE)
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.restore_mode_replace))
@@ -1107,7 +1168,10 @@ private fun RestoreModeDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                haptics.tick()
+                onDismiss()
+            }) {
                 Text(stringResource(R.string.cancel))
             }
         },

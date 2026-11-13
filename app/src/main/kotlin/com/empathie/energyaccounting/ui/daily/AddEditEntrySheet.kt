@@ -71,6 +71,7 @@ internal fun AddEditEntrySheet(
 ) {
     val colors = LocalEmpathieColors.current
     val context = LocalContext.current
+    val haptics = LocalAppHaptics.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val slotLabel = timeSlotLabel(context, draft.timeSlot)
 
@@ -168,7 +169,10 @@ internal fun AddEditEntrySheet(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = draft.updateTemplateDefaults,
-                        onCheckedChange = onUpdateTemplateDefaultsChange,
+                        onCheckedChange = { checked ->
+                            haptics.tick()
+                            onUpdateTemplateDefaultsChange(checked)
+                        },
                     )
                     Text(
                         text = stringResource(
@@ -181,7 +185,10 @@ internal fun AddEditEntrySheet(
             }
 
             Button(
-                onClick = onSave,
+                onClick = {
+                    haptics.tick()
+                    onSave()
+                },
                 enabled = draft.activity.isNotBlank() &&
                     draft.selectedDimensionId != null &&
                     !isSaving,
@@ -191,7 +198,13 @@ internal fun AddEditEntrySheet(
             }
 
             if (onDelete != null) {
-                TextButton(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
+                TextButton(
+                    onClick = {
+                        haptics.tick()
+                        onDelete()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     Text(stringResource(R.string.delete), color = colors.spend)
                 }
             }
@@ -240,6 +253,7 @@ private fun QuickTemplates(
 
     var showAllTemplates by remember { mutableStateOf(false) }
     val visible = templates.take(MAX_VISIBLE_TEMPLATES)
+    val haptics = LocalAppHaptics.current
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         SectionLabel(stringResource(R.string.pinned_templates))
@@ -250,7 +264,10 @@ private fun QuickTemplates(
             if (templates.size > MAX_VISIBLE_TEMPLATES) {
                 item(key = "more") {
                     AssistChip(
-                        onClick = { showAllTemplates = true },
+                        onClick = {
+                            haptics.tick()
+                            showAllTemplates = true
+                        },
                         label = { Text(stringResource(R.string.more_templates)) },
                     )
                 }

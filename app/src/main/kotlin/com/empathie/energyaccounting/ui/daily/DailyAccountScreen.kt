@@ -2,6 +2,7 @@ package com.empathie.energyaccounting.ui.daily
 
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -80,6 +82,7 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
     val calendarNetBalances by viewModel.calendarNetBalances.collectAsStateWithLifecycle()
     val today by viewModel.todayDate.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    val haptics = LocalAppHaptics.current
     var pendingDeleteId by remember { mutableStateOf<Long?>(null) }
 
     Scaffold(
@@ -87,6 +90,7 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
         topBar = {
             DateBar(
                 selectedDate = selectedDate,
+                today = today,
                 isToday = selectedDate == today,
                 onPreviousDay = viewModel::goToPreviousDay,
                 onNextDay = viewModel::goToNextDay,
@@ -96,7 +100,10 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { viewModel.requestNewEntrySheet() },
+                onClick = {
+                    haptics.tick()
+                    viewModel.requestNewEntrySheet()
+                },
                 icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                 text = { Text(stringResource(R.string.add_entry)) },
             )
@@ -210,6 +217,7 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
 @Composable
 private fun DateBar(
     selectedDate: LocalDate,
+    today: LocalDate,
     isToday: Boolean,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
@@ -252,14 +260,14 @@ private fun DateBar(
                     color = LocalEmpathieColors.current.onSurfaceMuted,
                 )
             }
-            if (!isToday) {
-                TextButton(onClick = {
+            TodayDayIcon(
+                dayOfMonth = today.dayOfMonth,
+                isToday = isToday,
+                onClick = {
                     haptics.tick()
                     onGoToToday()
-                }) {
-                    Text(stringResource(R.string.today))
-                }
-            }
+                },
+            )
             IconButton(onClick = {
                 haptics.tick()
                 onNextDay()
@@ -267,6 +275,40 @@ private fun DateBar(
                 Icon(Icons.Filled.ChevronRight, contentDescription = stringResource(R.string.next_day))
             }
         }
+    }
+}
+
+/**
+ * A calendar-style badge showing today's day number; tapping it jumps back to today.
+ * It is always present so the centered date never shifts when navigating days.
+ */
+@Composable
+private fun TodayDayIcon(
+    dayOfMonth: Int,
+    isToday: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = LocalEmpathieColors.current
+    val accent = MaterialTheme.colorScheme.primary
+    Box(
+        modifier = Modifier
+            .padding(horizontal = 2.dp)
+            .size(38.dp)
+            .clip(RoundedCornerShape(11.dp))
+            .border(
+                width = 1.5.dp,
+                color = if (isToday) colors.border else accent,
+                shape = RoundedCornerShape(11.dp),
+            )
+            .clickable(enabled = !isToday, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = dayOfMonth.toString(),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = if (isToday) colors.onSurfaceMuted else accent,
+        )
     }
 }
 
@@ -327,6 +369,7 @@ private fun TimeSlotCard(
 ) {
     val colors = LocalEmpathieColors.current
     val context = LocalContext.current
+    val haptics = LocalAppHaptics.current
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -349,7 +392,10 @@ private fun TimeSlotCard(
                         else -> colors.net
                     },
                 )
-                IconButton(onClick = onAddToSlot) {
+                IconButton(onClick = {
+                    haptics.tick()
+                    onAddToSlot()
+                }) {
                     Icon(
                         Icons.Filled.Add,
                         contentDescription = stringResource(
@@ -370,7 +416,10 @@ private fun TimeSlotCard(
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     ledger.entries.forEach { entry ->
-                        EntryRow(entry = entry, onClick = { onEntryClick(entry) })
+                        EntryRow(entry = entry, onClick = {
+                            haptics.tick()
+                            onEntryClick(entry)
+                        })
                     }
                 }
             }
