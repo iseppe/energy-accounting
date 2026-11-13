@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -56,31 +57,36 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
         item { Spacer(Modifier.height(8.dp)) }
 
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = state.period == InsightsPeriod.TODAY,
-                    onClick = { viewModel.selectPeriod(InsightsPeriod.TODAY) },
-                    label = { Text(stringResource(R.string.today_period)) },
-                )
-                FilterChip(
-                    selected = state.period == InsightsPeriod.LAST_7_DAYS,
-                    onClick = { viewModel.selectPeriod(InsightsPeriod.LAST_7_DAYS) },
-                    label = { Text(stringResource(R.string.last_7_days)) },
-                )
-                FilterChip(
-                    selected = state.period == InsightsPeriod.LAST_30_DAYS,
-                    onClick = { viewModel.selectPeriod(InsightsPeriod.LAST_30_DAYS) },
-                    label = { Text(stringResource(R.string.last_30_days)) },
-                )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                item {
+                    FilterChip(
+                        selected = state.period == InsightsPeriod.TODAY,
+                        onClick = { viewModel.selectPeriod(InsightsPeriod.TODAY) },
+                        label = { Text(stringResource(R.string.today_period)) },
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = state.period == InsightsPeriod.LAST_7_DAYS,
+                        onClick = { viewModel.selectPeriod(InsightsPeriod.LAST_7_DAYS) },
+                        label = { Text(stringResource(R.string.last_7_days)) },
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = state.period == InsightsPeriod.LAST_30_DAYS,
+                        onClick = { viewModel.selectPeriod(InsightsPeriod.LAST_30_DAYS) },
+                        label = { Text(stringResource(R.string.last_30_days)) },
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = state.period == InsightsPeriod.CUSTOM,
+                        onClick = { viewModel.selectPeriod(InsightsPeriod.CUSTOM) },
+                        label = { Text(stringResource(R.string.custom_range)) },
+                    )
+                }
             }
-        }
-
-        item {
-            FilterChip(
-                selected = state.period == InsightsPeriod.CUSTOM,
-                onClick = { viewModel.selectPeriod(InsightsPeriod.CUSTOM) },
-                label = { Text(stringResource(R.string.custom_range)) },
-            )
         }
 
         if (state.period == InsightsPeriod.CUSTOM) {
@@ -103,6 +109,8 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
         }
 
         item { PeriodSummaryCard(insights) }
+
+        item { EnergyTrendChartCard(insights) }
 
         item {
             SectionCard(title = stringResource(R.string.spend_by_dimension)) {

@@ -31,6 +31,21 @@ data class TimeSlotImpactSummary(
 )
 
 /**
+ * One bucket of the Insights trend chart.
+ *
+ * A single-day period emits one point per [TimeSlot] ([timeSlot] set); a multi-day
+ * period emits one point per calendar day ([date] set), including days with no entries.
+ */
+data class EnergyChartPoint(
+    val label: String,
+    val timeSlot: TimeSlot? = null,
+    val date: LocalDate? = null,
+    val gain: Int,
+    val spend: Int,
+    val netBalance: Int,
+)
+
+/**
  * Aggregated insights for an inclusive [startDate]..[endDate] range.
  *
  * [averageDailyNet] divides [netBalance] by [activeDaysCount] with integer division and
@@ -46,4 +61,5 @@ data class PeriodInsights(
     val averageDailyNet: Int,
     val byDimension: List<DimensionImpactSummary>,
     val byTimeSlot: List<TimeSlotImpactSummary>,
+    val chartPoints: List<EnergyChartPoint>,
 )

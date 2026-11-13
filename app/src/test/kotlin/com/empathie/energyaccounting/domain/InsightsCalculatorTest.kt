@@ -111,4 +111,48 @@ class InsightsCalculatorTest {
         assertTrue(insights.byDimension.all { it.gainSharePercent == 0 })
         assertTrue(insights.byTimeSlot.all { it.averageNetPerActiveDay == 0 })
     }
+
+    @Test
+    fun `single-day period produces 4 chronological TimeSlot chartPoints`() {
+        val day = LocalDate.of(2026, 11, 13)
+        val entries = listOf(
+            Entry(1L, day, TimeSlot.EARLY_MORNING, "Wake up", null, Direction.SPEND, 15, cognitive, 1L),
+            Entry(2L, day, TimeSlot.LATE_MORNING, "Coffee", null, Direction.GAIN, 20, sensory, 2L)
+        )
+        val insights = InsightsCalculator.calculate(day, day, entries, dimensions)
+
+        assertEquals(4, insights.chartPoints.size)
+        assertEquals(TimeSlot.EARLY_MORNING, insights.chartPoints[0].timeSlot)
+        assertEquals(0, insights.chartPoints[0].gain)
+        assertEquals(15, insights.chartPoints[0].spend)
+        assertEquals(-15, insights.chartPoints[0].netBalance)
+        assertEquals(TimeSlot.LATE_MORNING, insights.chartPoints[1].timeSlot)
+        assertEquals(20, insights.chartPoints[1].gain)
+        assertEquals(0, insights.chartPoints[1].spend)
+        assertEquals(20, insights.chartPoints[1].netBalance)
+    }
+
+    @Test
+    fun `multi-day period produces one chartPoint per calendar day including unlogged days`() {
+        val d1 = LocalDate.of(2026, 11, 11)
+        val d3 = LocalDate.of(2026, 11, 13)
+        val insights = InsightsCalculator.calculate(
+            d1, d3,
+            listOf(
+                Entry(1L, d1, TimeSlot.EARLY_MORNING, "A", null, Direction.SPEND, 30, cognitive, 1L),
+                Entry(2L, d3, TimeSlot.EVENING, "B", null, Direction.GAIN, 40, sensory, 2L)
+            ),
+            dimensions
+        )
+
+        assertEquals(3, insights.chartPoints.size)
+        assertEquals("11/11", insights.chartPoints[0].label)
+        assertEquals(-30, insights.chartPoints[0].netBalance)
+        assertEquals("12/11", insights.chartPoints[1].label)
+        assertEquals(0, insights.chartPoints[1].gain)
+        assertEquals(0, insights.chartPoints[1].spend)
+        assertEquals(0, insights.chartPoints[1].netBalance)
+        assertEquals("13/11", insights.chartPoints[2].label)
+        assertEquals(40, insights.chartPoints[2].netBalance)
+    }
 }
