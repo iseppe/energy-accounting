@@ -1,6 +1,7 @@
 package com.empathie.energyaccounting
 
 import android.app.Application
+import com.empathie.energyaccounting.data.diagnostics.AdjustableClock
 import com.empathie.energyaccounting.data.diagnostics.AppLogger
 import com.empathie.energyaccounting.data.local.DatabaseProvider
 import com.empathie.energyaccounting.data.local.EnergyAccountingDatabase
@@ -31,6 +32,12 @@ class EnergyAccountingApp : Application() {
 
     lateinit var settings: AppSettings
         private set
+
+    /**
+     * Process-scoped clock that Developer Mode can override; receivers and ViewModels
+     * read it so simulated times are consistent across the app.
+     */
+    val clock: AdjustableClock = AdjustableClock()
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 

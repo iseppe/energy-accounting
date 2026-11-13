@@ -3,6 +3,7 @@ package com.empathie.energyaccounting
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.HapticFeedbackConstants
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -20,9 +21,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -41,6 +44,8 @@ import com.empathie.energyaccounting.data.settings.LocaleHelper
 import com.empathie.energyaccounting.domain.model.TimeSlot
 import com.empathie.energyaccounting.reminder.CheckInReminderReceiver
 import com.empathie.energyaccounting.reminder.ReminderScheduler
+import com.empathie.energyaccounting.ui.common.AppHaptics
+import com.empathie.energyaccounting.ui.common.LocalAppHaptics
 import com.empathie.energyaccounting.ui.daily.DailyAccountScreen
 import com.empathie.energyaccounting.ui.daily.DailyAccountViewModel
 import com.empathie.energyaccounting.ui.insights.InsightsScreen
@@ -93,12 +98,12 @@ class MainActivity : ComponentActivity() {
 
             val dailyViewModel: DailyAccountViewModel = viewModel(
                 factory = viewModelFactory {
-                    initializer { DailyAccountViewModel(app.repository) }
+                    initializer { DailyAccountViewModel(app.repository, app.clock) }
                 }
             )
             val insightsViewModel: InsightsViewModel = viewModel(
                 factory = viewModelFactory {
-                    initializer { InsightsViewModel(app.repository) }
+                    initializer { InsightsViewModel(app.repository, app.clock) }
                 }
             )
             val manageViewModel: ManageExportViewModel = viewModel(
@@ -111,14 +116,23 @@ class MainActivity : ComponentActivity() {
                             reminderScheduler = ReminderScheduler(app),
                             settings = app.settings,
                             debugLogExporter = DebugLogExporter(app.database),
+                            clock = app.clock,
                         )
                     }
                 }
             )
 
             val themeMode by manageViewModel.themeMode.collectAsStateWithLifecycle()
+            val vibrationEnabled by manageViewModel.vibrationEnabled.collectAsStateWithLifecycle()
             val deepLink by deepLinkEvents.collectAsStateWithLifecycle()
             var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+
+            val view = LocalView.current
+            val haptics = remember(vibrationEnabled) {
+                AppHaptics(vibrationEnabled) {
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                }
+            }
 
             LaunchedEffect(deepLink?.id) {
                 val event = deepLink ?: return@LaunchedEffect
@@ -128,20 +142,22 @@ class MainActivity : ComponentActivity() {
                 deepLinkEvents.value = null
             }
 
-            EmpathieTheme(themeMode = themeMode) {
-                SyncSystemBars()
+            CompositionLocalProvider(LocalAppHaptics provides haptics) {
+                EmpathieTheme(themeMode = themeMode) {
+                    SyncSystemBars()
 
-                BackHandler(enabled = selectedTab != 0) {
-                    selectedTab = 0
+                    BackHandler(enabled = selectedTab != 0) {
+                        selectedTab = 0
+                    }
+
+                    AppShell(
+                        selectedTab = selectedTab,
+                        onSelectTab = { selectedTab = it },
+                        dailyViewModel = dailyViewModel,
+                        insightsViewModel = insightsViewModel,
+                        manageViewModel = manageViewModel,
+                    )
                 }
-
-                AppShell(
-                    selectedTab = selectedTab,
-                    onSelectTab = { selectedTab = it },
-                    dailyViewModel = dailyViewModel,
-                    insightsViewModel = insightsViewModel,
-                    manageViewModel = manageViewModel,
-                )
             }
         }
     }
@@ -189,6 +205,7 @@ private fun AppShell(
         R.string.tab_insights to Icons.Filled.Insights,
         R.string.tab_manage to Icons.Filled.Settings,
     )
+    val haptics = LocalAppHaptics.current
 
     Scaffold(
         bottomBar = {
@@ -196,7 +213,10 @@ private fun AppShell(
                 tabs.forEachIndexed { index, (labelRes, icon) ->
                     NavigationBarItem(
                         selected = selectedTab == index,
-                        onClick = { onSelectTab(index) },
+                        onClick = {
+                            haptics.tick()
+                            onSelectTab(index)
+                        },
                         icon = { Icon(icon, contentDescription = null) },
                         label = { Text(stringResource(labelRes)) },
                     )

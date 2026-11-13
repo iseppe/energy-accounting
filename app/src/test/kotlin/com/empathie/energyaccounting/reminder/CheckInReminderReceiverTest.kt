@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.empathie.energyaccounting.data.diagnostics.AdjustableClock
 import com.empathie.energyaccounting.data.local.EnergyAccountingDatabase
 import com.empathie.energyaccounting.data.local.entity.EntryEntity
 import com.empathie.energyaccounting.data.settings.AppLanguage
@@ -20,7 +21,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
@@ -90,5 +94,59 @@ class CheckInReminderReceiverTest {
 
         assertNotNull(text)
         assertTrue(text!!.contains("Sera"))
+    }
+
+    @Test
+    fun `AdjustableClock overrides date and time when set and restores system clock on reset`() {
+        val baseClock = Clock.fixed(Instant.parse("2026-11-13T08:00:00Z"), ZoneId.of("UTC"))
+        val adjustable = AdjustableClock(baseClock)
+
+        assertFalse(adjustable.state.value.isEnabled)
+        assertEquals(LocalDate.of(2026, 11, 13), LocalDate.now(adjustable))
+
+        adjustable.setFakeDateTime(LocalDate.of(2026, 11, 20), LocalTime.of(9, 29))
+        assertTrue(adjustable.state.value.isEnabled)
+        assertEquals(LocalDate.of(2026, 11, 20), LocalDate.now(adjustable))
+        assertEquals(LocalTime.of(9, 29), LocalTime.now(adjustable))
+
+        adjustable.advanceMinutes(1)
+        assertEquals(LocalTime.of(9, 30), LocalTime.now(adjustable))
+
+        adjustable.resetToSystem()
+        assertFalse(adjustable.state.value.isEnabled)
+        assertEquals(LocalDate.of(2026, 11, 13), LocalDate.now(adjustable))
+    }
+
+    @Test
+    fun `evaluateSlotForDiagnostics returns Posted when slot is empty and SuppressedEntriesExist when slot has entries`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val date = LocalDate.of(2026, 11, 13)
+
+        val firstEval = CheckInReminderReceiver.evaluateSlotForDiagnostics(
+            context, db.dao(), date, TimeSlot.EARLY_MORNING
+        )
+        assertEquals(SlotEvaluationResult.Posted(date, TimeSlot.EARLY_MORNING), firstEval)
+
+        val dim = db.dao().observeAllDimensions().first().first()
+        db.dao().insertEntry(
+            EntryEntity(
+                dateIso = date.toString(),
+                timeSlot = TimeSlot.EARLY_MORNING.name,
+                activity = "ansia per multa treno",
+                situationalNote = null,
+                direction = Direction.SPEND.name,
+                energyValue = 15,
+                dimensionId = dim.id,
+                createdAtEpochMillis = 100L
+            )
+        )
+
+        val secondEval = CheckInReminderReceiver.evaluateSlotForDiagnostics(
+            context, db.dao(), date, TimeSlot.EARLY_MORNING
+        )
+        assertEquals(
+            SlotEvaluationResult.SuppressedEntriesExist(date, TimeSlot.EARLY_MORNING, entryCount = 1),
+            secondEval
+        )
     }
 }

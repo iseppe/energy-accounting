@@ -57,6 +57,44 @@ open class ReminderScheduler(private val context: Context) {
         return target.toInstant().toEpochMilli()
     }
 
+    fun canScheduleExactAlarms(): Boolean = canUseExactAlarms()
+
+    /**
+     * Arms a real OS alarm a few seconds from now so Developer Mode can prove that a
+     * notification arrives while the app is backgrounded or the screen is locked.
+     */
+    fun scheduleTestAlarmInSeconds(
+        timeSlot: TimeSlot,
+        seconds: Long = 5,
+        forcePost: Boolean = true,
+    ) {
+        val intent = Intent(context, CheckInReminderReceiver::class.java).apply {
+            putExtra(CheckInReminderReceiver.EXTRA_TIME_SLOT, timeSlot.name)
+            putExtra(CheckInReminderReceiver.EXTRA_FORCE_POST, forcePost)
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            REQUEST_CODE_BASE + 100 + timeSlot.ordinal,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val triggerAtMillis = System.currentTimeMillis() + seconds * 1_000L
+
+        if (canUseExactAlarms()) {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerAtMillis,
+                pendingIntent,
+            )
+        } else {
+            alarmManager.setAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerAtMillis,
+                pendingIntent,
+            )
+        }
+    }
+
     private fun canUseExactAlarms(): Boolean =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             alarmManager.canScheduleExactAlarms()

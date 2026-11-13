@@ -3,6 +3,7 @@ package com.empathie.energyaccounting.ui
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.empathie.energyaccounting.data.diagnostics.AdjustableClock
 import com.empathie.energyaccounting.data.diagnostics.DebugLogExporter
 import com.empathie.energyaccounting.data.export.BackupSerializer
 import com.empathie.energyaccounting.data.export.PractitionerPdfGenerator
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -75,7 +77,10 @@ class ManageExportViewModelTest {
         db2.close()
     }
 
-    private fun viewModel(repo: EnergyAccountingRepository): ManageExportViewModel =
+    private fun viewModel(
+        repo: EnergyAccountingRepository,
+        clock: AdjustableClock = AdjustableClock(),
+    ): ManageExportViewModel =
         ManageExportViewModel(
             repo = repo,
             backupSerializer = BackupSerializer(db2),
@@ -83,6 +88,7 @@ class ManageExportViewModelTest {
             reminderScheduler = scheduler,
             settings = AppSettings(context),
             debugLogExporter = DebugLogExporter(db2),
+            clock = clock,
         )
 
     @Test
@@ -161,5 +167,26 @@ class ManageExportViewModelTest {
         assertTrue(evening!!.isEnabled)
         assertEquals(21, evening.hour)
         assertEquals(30, evening.minute)
+    }
+
+    @Test
+    fun `tapping build footer 5 times unlocks devMode and disabling devMode resets fake clock`() = runTest {
+        val clock = AdjustableClock()
+        val viewModel = viewModel(EnergyAccountingRepository(db1), clock)
+        assertFalse(viewModel.devModeEnabled.value)
+
+        repeat(4) {
+            assertFalse(viewModel.onBuildFooterTapped())
+            assertFalse(viewModel.devModeEnabled.value)
+        }
+        assertTrue(viewModel.onBuildFooterTapped())
+        assertTrue(viewModel.devModeEnabled.value)
+
+        viewModel.setFakeDateTime(LocalDate.of(2026, 11, 25), java.time.LocalTime.of(9, 29))
+        assertTrue(viewModel.fakeClockState.value.isEnabled)
+
+        viewModel.disableDevMode()
+        assertFalse(viewModel.devModeEnabled.value)
+        assertFalse(viewModel.fakeClockState.value.isEnabled)
     }
 }

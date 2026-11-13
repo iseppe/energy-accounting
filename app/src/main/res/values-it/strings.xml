@@ -157,4 +157,7 @@
     <string name="slot_short_late">Tarda</string>
     <string name="slot_short_afternoon">Pomer.</string>
     <string name="slot_short_evening">Sera</string>
+    <string name="dev_status_ok">OK</string>
+    <string name="dev_status_blocked">Bloccato</string>
+    <string name="dev_status_inexact">Fallback inesatto</string>
 </resources>

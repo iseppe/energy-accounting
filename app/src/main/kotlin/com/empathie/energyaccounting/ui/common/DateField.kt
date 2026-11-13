@@ -37,7 +37,13 @@ fun DateField(
     var showPicker by remember { mutableStateOf(false) }
 
     OutlinedButton(onClick = { showPicker = true }, modifier = modifier) {
-        Text("$label: ${EnergyFormatter.formatDate(date)}")
+        Text(
+            if (label.isBlank()) {
+                EnergyFormatter.formatDate(date)
+            } else {
+                "$label: ${EnergyFormatter.formatDate(date)}"
+            }
+        )
     }
 
     if (showPicker) {

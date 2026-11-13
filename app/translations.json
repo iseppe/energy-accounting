@@ -626,5 +626,17 @@
   "slot_short_evening": {
     "en": "Evening",
     "it": "Sera"
+  },
+  "dev_status_ok": {
+    "en": "OK",
+    "it": "OK"
+  },
+  "dev_status_blocked": {
+    "en": "Blocked",
+    "it": "Bloccato"
+  },
+  "dev_status_inexact": {
+    "en": "Inexact fallback",
+    "it": "Fallback inesatto"
   }
 }

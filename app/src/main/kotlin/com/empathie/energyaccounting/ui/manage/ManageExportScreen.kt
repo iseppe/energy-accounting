@@ -4,12 +4,16 @@ import android.Manifest
 import android.app.Activity
 import android.app.TimePickerDialog
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.text.format.DateFormat
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -21,6 +25,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,6 +35,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -38,7 +45,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -57,6 +63,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.empathie.energyaccounting.BuildConfig
 import com.empathie.energyaccounting.R
@@ -70,7 +77,11 @@ import com.empathie.energyaccounting.domain.model.EnergyDimension
 import com.empathie.energyaccounting.domain.model.TimeSlot
 import com.empathie.energyaccounting.domain.service.EnergyFormatter
 import com.empathie.energyaccounting.reminder.CheckInReminderReceiver
+import com.empathie.energyaccounting.reminder.ReminderScheduler
+import com.empathie.energyaccounting.reminder.SlotEvaluationResult
 import com.empathie.energyaccounting.ui.common.DateField
+import com.empathie.energyaccounting.ui.common.EnergyDirectionAndValueSelector
+import com.empathie.energyaccounting.ui.common.LocalAppHaptics
 import com.empathie.energyaccounting.ui.daily.dimensionLabel
 import com.empathie.energyaccounting.ui.daily.timeSlotLabel
 import com.empathie.energyaccounting.ui.theme.LocalEmpathieColors
@@ -78,10 +89,11 @@ import com.empathie.energyaccounting.ui.theme.ThemeMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.math.roundToInt
 
 private enum class ExportKind { PDF, CSV, JSON, DEBUG_LOG }
 
@@ -101,7 +113,12 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
     val reminders by viewModel.reminders.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
+    val vibrationEnabled by viewModel.vibrationEnabled.collectAsStateWithLifecycle()
+    val devModeEnabled by viewModel.devModeEnabled.collectAsStateWithLifecycle()
+    val fakeClockState by viewModel.fakeClockState.collectAsStateWithLifecycle()
+    val lastSlotEvaluation by viewModel.lastSlotEvaluation.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
+    val haptics = LocalAppHaptics.current
 
     var editingTemplate by remember { mutableStateOf<ActivityTemplate?>(null) }
     var showCreateTemplate by remember { mutableStateOf(false) }
@@ -111,6 +128,7 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
     var pendingExport by remember { mutableStateOf<ExportRequest?>(null) }
     var pendingRestoreMode by remember { mutableStateOf<RestoreMode?>(null) }
     var pendingEnableReminder by remember { mutableStateOf<CheckInReminder?>(null) }
+    var selectedDevSlot by remember { mutableStateOf(TimeSlot.EARLY_MORNING) }
 
     fun postTestNotification() {
         val posted = CheckInReminderReceiver.postTestNotification(
@@ -123,6 +141,43 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
             context.getString(R.string.reminder_permission_rationale)
         }
         Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+    }
+
+    fun sharePdf(start: LocalDate, end: LocalDate) {
+        scope.launch {
+            val bytes = withContext(Dispatchers.IO) {
+                runCatching { viewModel.buildPdf(start, end, PdfLabels.from(context)) }.getOrNull()
+            }
+            if (bytes == null) {
+                viewModel.reportExportFailure()
+                return@launch
+            }
+
+            val chooser = withContext(Dispatchers.IO) {
+                runCatching {
+                    val directory = File(context.cacheDir, "reports").apply { mkdirs() }
+                    val file = File(directory, "energy-accounting-${start}_${end}.pdf")
+                    file.writeBytes(bytes)
+                    val uri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        file,
+                    )
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = "application/pdf"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    Intent.createChooser(send, context.getString(R.string.share_pdf))
+                }.getOrNull()
+            }
+
+            if (chooser != null) {
+                context.startActivity(chooser)
+            } else {
+                viewModel.reportExportFailure()
+            }
+        }
     }
 
     val createDocument = rememberLauncherForActivityResult(
@@ -261,6 +316,7 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                         FilterChip(
                             selected = appLanguage == language,
                             onClick = {
+                                haptics.tick()
                                 viewModel.setAppLanguage(language)
                                 activity?.recreate()
                             },
@@ -275,6 +331,21 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                             },
                         )
                     }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.vibration_feedback),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = vibrationEnabled,
+                        onCheckedChange = { enabled ->
+                            haptics.tick()
+                            viewModel.setVibrationEnabled(enabled)
+                        },
+                    )
                 }
             }
         }
@@ -389,19 +460,219 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                     Text(stringResource(R.string.export_json_backup))
                 }
                 OutlinedButton(
-                    onClick = {
-                        pendingExport = ExportRequest(ExportKind.DEBUG_LOG)
-                        createDocument.launch("energy-accounting-debug-${LocalDate.now()}.log")
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.export_debug_log))
-                }
-                OutlinedButton(
                     onClick = { showRestoreMode = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.restore_json_backup))
+                }
+            }
+        }
+
+        if (devModeEnabled) {
+            item {
+                SectionCard(title = stringResource(R.string.dev_mode_title)) {
+                    TextButton(onClick = {
+                        haptics.tick()
+                        viewModel.disableDevMode()
+                    }) {
+                        Text(stringResource(R.string.dev_mode_disable))
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(R.string.fake_clock_enable),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Switch(
+                            checked = fakeClockState.isEnabled,
+                            onCheckedChange = { enabled ->
+                                haptics.tick()
+                                if (enabled) {
+                                    viewModel.setFakeDateTime(
+                                        fakeClockState.currentDate,
+                                        fakeClockState.currentTime,
+                                    )
+                                } else {
+                                    viewModel.resetFakeClock()
+                                }
+                            },
+                        )
+                    }
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        DateField(
+                            label = "",
+                            date = fakeClockState.currentDate,
+                            onDateChange = { date ->
+                                viewModel.setFakeDateTime(date, fakeClockState.currentTime)
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(
+                            onClick = {
+                                TimePickerDialog(
+                                    context,
+                                    { _, hour, minute ->
+                                        viewModel.setFakeDateTime(
+                                            fakeClockState.currentDate,
+                                            LocalTime.of(hour, minute),
+                                        )
+                                    },
+                                    fakeClockState.currentTime.hour,
+                                    fakeClockState.currentTime.minute,
+                                    DateFormat.is24HourFormat(context),
+                                ).show()
+                            }
+                        ) {
+                            Text(fakeClockState.currentTime.format(DateTimeFormatter.ofPattern("HH:mm")))
+                        }
+                    }
+
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val presets = listOf(
+                            LocalTime.of(9, 29),
+                            LocalTime.of(12, 29),
+                            LocalTime.of(17, 29),
+                            LocalTime.of(20, 59),
+                        )
+                        items(presets) { time ->
+                            AssistChip(
+                                onClick = {
+                                    haptics.tick()
+                                    viewModel.setFakeDateTime(fakeClockState.currentDate, time)
+                                },
+                                label = { Text(time.format(DateTimeFormatter.ofPattern("HH:mm"))) },
+                            )
+                        }
+                        item {
+                            AssistChip(
+                                onClick = {
+                                    haptics.tick()
+                                    viewModel.advanceFakeClockMinutes(1)
+                                },
+                                label = { Text(stringResource(R.string.fake_clock_advance)) },
+                            )
+                        }
+                        item {
+                            AssistChip(
+                                onClick = {
+                                    haptics.tick()
+                                    viewModel.resetFakeClock()
+                                },
+                                label = { Text(stringResource(R.string.fake_clock_reset)) },
+                            )
+                        }
+                    }
+
+                    val notificationsEnabled = androidx.core.app.NotificationManagerCompat
+                        .from(context)
+                        .areNotificationsEnabled()
+                    val exactEnabled = ReminderScheduler(context).canScheduleExactAlarms()
+
+                    Text(
+                        text = "${stringResource(R.string.dev_status_notifications)}: " +
+                            stringResource(
+                                if (notificationsEnabled) R.string.dev_status_ok
+                                else R.string.dev_status_blocked
+                            ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "${stringResource(R.string.dev_status_exact_alarms)}: " +
+                                stringResource(
+                                    if (exactEnabled) R.string.dev_status_ok
+                                    else R.string.dev_status_inexact
+                                ),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (!exactEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            TextButton(
+                                onClick = {
+                                    runCatching {
+                                        context.startActivity(
+                                            Intent(
+                                                Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                                Uri.parse("package:${context.packageName}"),
+                                            )
+                                        )
+                                    }
+                                }
+                            ) {
+                                Text(stringResource(R.string.dev_grant_exact_alarm))
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = stringResource(R.string.dev_slot_evaluator),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = LocalEmpathieColors.current.onSurfaceMuted,
+                    )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(TimeSlot.entries) { slot ->
+                            FilterChip(
+                                selected = selectedDevSlot == slot,
+                                onClick = {
+                                    haptics.tick()
+                                    selectedDevSlot = slot
+                                },
+                                label = { Text(timeSlotLabel(context, slot)) },
+                            )
+                        }
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                haptics.tick()
+                                scope.launch {
+                                    viewModel.evaluateSlotAtCurrentClock(context, selectedDevSlot)
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(stringResource(R.string.dev_evaluate_slot))
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                haptics.tick()
+                                viewModel.scheduleTestAlarmIn5Seconds(selectedDevSlot)
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.dev_alarm_scheduled_5s),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(stringResource(R.string.dev_fire_alarm_5s))
+                        }
+                    }
+
+                    lastSlotEvaluation?.let { result ->
+                        Text(
+                            text = describeSlotResult(context, result),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = LocalEmpathieColors.current.onSurfaceMuted,
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            pendingExport = ExportRequest(ExportKind.DEBUG_LOG)
+                            createDocument.launch("energy-accounting-debug-${LocalDate.now()}.log")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.export_debug_log))
+                    }
                 }
             }
         }
@@ -414,6 +685,16 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable {
+                        haptics.tick()
+                        if (viewModel.onBuildFooterTapped()) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.dev_mode_enabled_toast),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    }
                     .padding(vertical = 8.dp),
             )
         }
@@ -448,9 +729,13 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
     if (showPdfRange) {
         PdfRangeDialog(
             onDismiss = { showPdfRange = false },
-            onExport = { start, end ->
-                val (normalizedStart, normalizedEnd) =
-                    if (start.isAfter(end)) end to start else start to end
+            onShare = { start, end ->
+                val (normalizedStart, normalizedEnd) = normalizeRange(start, end)
+                sharePdf(normalizedStart, normalizedEnd)
+                showPdfRange = false
+            },
+            onSave = { start, end ->
+                val (normalizedStart, normalizedEnd) = normalizeRange(start, end)
                 pendingExport = ExportRequest(ExportKind.PDF, normalizedStart, normalizedEnd)
                 createDocument.launch("energy-accounting-report-${LocalDate.now()}.pdf")
                 showPdfRange = false
@@ -591,6 +876,7 @@ private fun TemplateEditDialog(
     onSave: (ActivityTemplate) -> Unit,
 ) {
     val context = LocalContext.current
+    val haptics = LocalAppHaptics.current
     var name by remember { mutableStateOf(template?.activityName ?: "") }
     var direction by remember { mutableStateOf(template?.defaultDirection ?: Direction.SPEND) }
     var value by remember { mutableStateOf(template?.defaultEnergyValue ?: 30) }
@@ -624,41 +910,24 @@ private fun TemplateEditDialog(
                     label = { Text(stringResource(R.string.activity)) },
                     singleLine = true,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = direction == Direction.SPEND,
-                        onClick = { direction = Direction.SPEND },
-                        label = { Text(stringResource(R.string.direction_spend)) },
-                    )
-                    FilterChip(
-                        selected = direction == Direction.GAIN,
-                        onClick = { direction = Direction.GAIN },
-                        label = { Text(stringResource(R.string.direction_gain)) },
-                    )
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Slider(
-                        value = value.toFloat().coerceIn(5f, 100f),
-                        onValueChange = { value = ((it / 5f).roundToInt() * 5).coerceIn(5, 100) },
-                        valueRange = 5f..100f,
-                        steps = 18,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        text = EnergyFormatter.formatSignedValue(direction, value),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
+                EnergyDirectionAndValueSelector(
+                    direction = direction,
+                    energyValue = value,
+                    onDirectionChange = { direction = it },
+                    onEnergyValueChange = { value = it },
+                )
                 Text(
                     text = stringResource(R.string.default_dimension),
                     style = MaterialTheme.typography.labelSmall,
                 )
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    selectableDimensions.forEach { dimension ->
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(selectableDimensions, key = { it.id }) { dimension ->
                         FilterChip(
                             selected = dimensionId == dimension.id,
-                            onClick = { dimensionId = dimension.id },
+                            onClick = {
+                                haptics.tick()
+                                dimensionId = dimension.id
+                            },
                             label = { Text(dimensionChipLabel(context, dimension)) },
                         )
                     }
@@ -740,7 +1009,8 @@ private fun AddDimensionDialog(
 @Composable
 private fun PdfRangeDialog(
     onDismiss: () -> Unit,
-    onExport: (LocalDate, LocalDate) -> Unit,
+    onShare: (LocalDate, LocalDate) -> Unit,
+    onSave: (LocalDate, LocalDate) -> Unit,
 ) {
     var start by remember { mutableStateOf(LocalDate.now().minusDays(6)) }
     var end by remember { mutableStateOf(LocalDate.now()) }
@@ -762,8 +1032,13 @@ private fun PdfRangeDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onExport(start, end) }) {
-                Text(stringResource(R.string.apply))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = { onShare(start, end) }) {
+                    Text(stringResource(R.string.share_pdf))
+                }
+                TextButton(onClick = { onSave(start, end) }) {
+                    Text(stringResource(R.string.save_pdf))
+                }
             }
         },
         dismissButton = {
@@ -772,6 +1047,26 @@ private fun PdfRangeDialog(
             }
         },
     )
+}
+
+private fun normalizeRange(start: LocalDate, end: LocalDate): Pair<LocalDate, LocalDate> =
+    if (start.isAfter(end)) end to start else start to end
+
+private fun describeSlotResult(context: Context, result: SlotEvaluationResult): String = when (result) {
+    is SlotEvaluationResult.Posted -> context.getString(
+        R.string.dev_result_posted,
+        timeSlotLabel(context, result.timeSlot),
+        EnergyFormatter.formatDate(result.date),
+    )
+
+    is SlotEvaluationResult.SuppressedEntriesExist -> context.getString(
+        R.string.dev_result_suppressed,
+        result.entryCount,
+        timeSlotLabel(context, result.timeSlot),
+        EnergyFormatter.formatDate(result.date),
+    )
+
+    SlotEvaluationResult.BlockedNotificationsDisabled -> context.getString(R.string.dev_result_blocked)
 }
 
 @Composable
