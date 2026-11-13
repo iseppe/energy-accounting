@@ -291,7 +291,10 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                     ThemeMode.entries.forEach { mode ->
                         FilterChip(
                             selected = themeMode == mode,
-                            onClick = { viewModel.setThemeMode(mode) },
+                            onClick = {
+                                haptics.tick()
+                                viewModel.setThemeMode(mode)
+                            },
                             label = {
                                 Text(
                                     when (mode) {
@@ -766,6 +769,7 @@ private fun TemplateRow(
 ) {
     val context = LocalContext.current
     val colors = LocalEmpathieColors.current
+    val haptics = LocalAppHaptics.current
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(template.activityName, style = MaterialTheme.typography.bodyMedium)
@@ -777,7 +781,10 @@ private fun TemplateRow(
                 color = colors.onSurfaceMuted,
             )
         }
-        IconButton(onClick = onTogglePin) {
+        IconButton(onClick = {
+            haptics.tick()
+            onTogglePin()
+        }) {
             Icon(
                 imageVector = if (template.isPinned) Icons.Filled.Star else Icons.Outlined.StarOutline,
                 contentDescription = stringResource(
@@ -785,10 +792,16 @@ private fun TemplateRow(
                 ),
             )
         }
-        IconButton(onClick = onEdit) {
+        IconButton(onClick = {
+            haptics.tick()
+            onEdit()
+        }) {
             Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.edit))
         }
-        IconButton(onClick = onDelete) {
+        IconButton(onClick = {
+            haptics.tick()
+            onDelete()
+        }) {
             Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.delete))
         }
     }

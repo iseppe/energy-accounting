@@ -37,6 +37,7 @@ import com.empathie.energyaccounting.domain.model.PeriodInsights
 import com.empathie.energyaccounting.domain.model.TimeSlotImpactSummary
 import com.empathie.energyaccounting.domain.service.EnergyFormatter
 import com.empathie.energyaccounting.ui.common.DateField
+import com.empathie.energyaccounting.ui.common.LocalAppHaptics
 import com.empathie.energyaccounting.ui.daily.dimensionLabel
 import com.empathie.energyaccounting.ui.daily.timeSlotLabel
 import com.empathie.energyaccounting.ui.theme.LocalEmpathieColors
@@ -47,6 +48,7 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
     val insights by viewModel.insights.collectAsStateWithLifecycle()
     val filteredEntries by viewModel.filteredEntries.collectAsStateWithLifecycle()
     val colors = LocalEmpathieColors.current
+    val haptics = LocalAppHaptics.current
 
     LazyColumn(
         modifier = Modifier
@@ -61,28 +63,40 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
                 item {
                     FilterChip(
                         selected = state.period == InsightsPeriod.TODAY,
-                        onClick = { viewModel.selectPeriod(InsightsPeriod.TODAY) },
+                        onClick = {
+                            haptics.tick()
+                            viewModel.selectPeriod(InsightsPeriod.TODAY)
+                        },
                         label = { Text(stringResource(R.string.today_period)) },
                     )
                 }
                 item {
                     FilterChip(
                         selected = state.period == InsightsPeriod.LAST_7_DAYS,
-                        onClick = { viewModel.selectPeriod(InsightsPeriod.LAST_7_DAYS) },
+                        onClick = {
+                            haptics.tick()
+                            viewModel.selectPeriod(InsightsPeriod.LAST_7_DAYS)
+                        },
                         label = { Text(stringResource(R.string.last_7_days)) },
                     )
                 }
                 item {
                     FilterChip(
                         selected = state.period == InsightsPeriod.LAST_30_DAYS,
-                        onClick = { viewModel.selectPeriod(InsightsPeriod.LAST_30_DAYS) },
+                        onClick = {
+                            haptics.tick()
+                            viewModel.selectPeriod(InsightsPeriod.LAST_30_DAYS)
+                        },
                         label = { Text(stringResource(R.string.last_30_days)) },
                     )
                 }
                 item {
                     FilterChip(
                         selected = state.period == InsightsPeriod.CUSTOM,
-                        onClick = { viewModel.selectPeriod(InsightsPeriod.CUSTOM) },
+                        onClick = {
+                            haptics.tick()
+                            viewModel.selectPeriod(InsightsPeriod.CUSTOM)
+                        },
                         label = { Text(stringResource(R.string.custom_range)) },
                     )
                 }
@@ -124,7 +138,10 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
                             spend = true,
                             color = colors.spend,
                             selected = summary.dimension.id == state.selectedDimensionId,
-                            onClick = { viewModel.toggleDimensionFilter(summary.dimension.id) },
+                            onClick = {
+                                haptics.tick()
+                                viewModel.toggleDimensionFilter(summary.dimension.id)
+                            },
                         )
                     }
                 }
@@ -143,7 +160,10 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
                             spend = false,
                             color = colors.gain,
                             selected = summary.dimension.id == state.selectedDimensionId,
-                            onClick = { viewModel.toggleDimensionFilter(summary.dimension.id) },
+                            onClick = {
+                                haptics.tick()
+                                viewModel.toggleDimensionFilter(summary.dimension.id)
+                            },
                         )
                     }
                 }

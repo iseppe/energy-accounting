@@ -14,9 +14,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import java.time.Clock
 import java.time.LocalDate
@@ -60,6 +62,9 @@ class DailyAccountViewModel(
     private val _selectedDate = MutableStateFlow(today)
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
 
+    private val _todayDate = MutableStateFlow(today)
+    val todayDate: StateFlow<LocalDate> = _todayDate.asStateFlow()
+
     private val _draftState = MutableStateFlow<EntryDraftState?>(null)
     val draftState: StateFlow<EntryDraftState?> = _draftState.asStateFlow()
 
@@ -96,6 +101,19 @@ class DailyAccountViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     private var editingEntry: Entry? = null
+
+    init {
+        // Developer Mode's fake clock must move the whole app, not only alarm evaluation.
+        (clock as? com.empathie.energyaccounting.data.diagnostics.AdjustableClock)?.let { adjustable ->
+            viewModelScope.launch {
+                adjustable.state.drop(1).collect { state ->
+                    _todayDate.value = state.currentDate
+                    _selectedDate.value = state.currentDate
+                    _calendarMonth.value = YearMonth.from(state.currentDate)
+                }
+            }
+        }
+    }
 
     fun selectDate(date: LocalDate) {
         _selectedDate.value = date

@@ -37,7 +37,7 @@ import java.util.Locale
  */
 class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
 
-    private val dao = db.dao()
+    internal val dao = db.dao()
 
     fun observeDailyAccount(date: LocalDate): Flow<DailyAccount> =
         dao.observeEntriesForDate(date.toString()).map { rows ->

@@ -11,7 +11,6 @@ import com.empathie.energyaccounting.data.export.CsvExporter
 import com.empathie.energyaccounting.data.export.PdfLabels
 import com.empathie.energyaccounting.data.export.PractitionerPdfGenerator
 import com.empathie.energyaccounting.data.export.RestoreMode
-import com.empathie.energyaccounting.data.local.DatabaseProvider
 import com.empathie.energyaccounting.data.repository.EnergyAccountingRepository
 import com.empathie.energyaccounting.data.settings.AppLanguage
 import com.empathie.energyaccounting.data.settings.AppSettings
@@ -145,12 +144,12 @@ class ManageExportViewModel(
         context: android.content.Context,
         timeSlot: TimeSlot,
     ): SlotEvaluationResult {
-        val state = clock.state.value
+        val date = java.time.LocalDate.now(clock)
         val result = withContext(Dispatchers.IO) {
             CheckInReminderReceiver.evaluateSlotForDiagnostics(
                 context = context,
-                dao = DatabaseProvider.get(context).dao(),
-                date = state.currentDate,
+                dao = repo.dao,
+                date = date,
                 timeSlot = timeSlot,
             )
         }

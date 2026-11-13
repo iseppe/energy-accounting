@@ -55,11 +55,15 @@ fun EnergyDirectionAndValueSelector(
             color = colors.onSurfaceMuted,
         )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             DirectionPill(
                 label = stringResource(R.string.direction_spend),
                 selected = direction == Direction.SPEND,
                 accent = colors.spend,
+                modifier = Modifier.weight(1f),
                 onClick = {
                     haptics.tick()
                     onDirectionChange(Direction.SPEND)
@@ -69,6 +73,7 @@ fun EnergyDirectionAndValueSelector(
                 label = stringResource(R.string.direction_gain),
                 selected = direction == Direction.GAIN,
                 accent = colors.gain,
+                modifier = Modifier.weight(1f),
                 onClick = {
                     haptics.tick()
                     onDirectionChange(Direction.GAIN)
@@ -133,6 +138,7 @@ private fun DirectionPill(
     label: String,
     selected: Boolean,
     accent: Color,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val colors = LocalEmpathieColors.current
@@ -140,13 +146,16 @@ private fun DirectionPill(
         shape = RoundedCornerShape(50),
         color = if (selected) accent.copy(alpha = 0.18f) else colors.surfaceRaised,
         border = BorderStroke(1.dp, if (selected) accent else colors.border),
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = modifier.clickable(onClick = onClick),
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             color = if (selected) accent else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 9.dp),
         )
     }
 }

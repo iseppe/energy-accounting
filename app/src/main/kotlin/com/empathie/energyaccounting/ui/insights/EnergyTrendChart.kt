@@ -16,6 +16,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,6 +55,13 @@ fun EnergyTrendChartCard(insights: PeriodInsights) {
     val colors = LocalEmpathieColors.current
     val context = LocalContext.current
     val points = insights.chartPoints
+    val labelPaint = remember(colors.onSurfaceMuted) {
+        android.graphics.Paint().apply {
+            isAntiAlias = true
+            color = colors.onSurfaceMuted.toArgb()
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+    }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -151,11 +159,8 @@ fun EnergyTrendChartCard(insights: PeriodInsights) {
                     drawCircle(color = colors.net, radius = 3.5.dp.toPx(), center = point)
                 }
 
-                val labelPaint = android.graphics.Paint().apply {
-                    color = colors.onSurfaceMuted.toArgb()
-                    textSize = 10.sp.toPx()
-                    textAlign = android.graphics.Paint.Align.CENTER
-                }
+                val labelPaint = labelPaint
+                labelPaint.textSize = 10.sp.toPx()
                 val labelStep = maxOf(1, ceil(points.size / 6f).toInt())
                 points.forEachIndexed { index, point ->
                     if (index % labelStep == 0) {

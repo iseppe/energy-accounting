@@ -59,6 +59,7 @@ import com.empathie.energyaccounting.domain.model.SystemDimensionKey
 import com.empathie.energyaccounting.domain.model.TimeSlot
 import com.empathie.energyaccounting.domain.model.TimeSlotLedger
 import com.empathie.energyaccounting.domain.service.EnergyFormatter
+import com.empathie.energyaccounting.ui.common.LocalAppHaptics
 import com.empathie.energyaccounting.ui.theme.LocalEmpathieColors
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -77,7 +78,7 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
     val dimensions by viewModel.dimensions.collectAsStateWithLifecycle()
     val calendarMonth by viewModel.calendarMonth.collectAsStateWithLifecycle()
     val calendarNetBalances by viewModel.calendarNetBalances.collectAsStateWithLifecycle()
-    val today = LocalDate.now()
+    val today by viewModel.todayDate.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var pendingDeleteId by remember { mutableStateOf<Long?>(null) }
 
@@ -126,6 +127,7 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
         CalendarHistorySheet(
             month = calendarMonth,
             selectedDate = selectedDate,
+            today = today,
             netBalances = calendarNetBalances,
             onMonthChange = viewModel::changeCalendarMonth,
             onSelectDate = viewModel::selectDate,
@@ -214,6 +216,7 @@ private fun DateBar(
     onOpenCalendar: () -> Unit,
     onGoToToday: () -> Unit,
 ) {
+    val haptics = LocalAppHaptics.current
     Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
         Row(
             modifier = Modifier
@@ -221,14 +224,20 @@ private fun DateBar(
                 .padding(horizontal = 4.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onPreviousDay) {
+            IconButton(onClick = {
+                haptics.tick()
+                onPreviousDay()
+            }) {
                 Icon(Icons.Filled.ChevronLeft, contentDescription = stringResource(R.string.previous_day))
             }
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(10.dp))
-                    .clickable(onClick = onOpenCalendar)
+                    .clickable {
+                        haptics.tick()
+                        onOpenCalendar()
+                    }
                     .padding(vertical = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -244,11 +253,17 @@ private fun DateBar(
                 )
             }
             if (!isToday) {
-                TextButton(onClick = onGoToToday) {
+                TextButton(onClick = {
+                    haptics.tick()
+                    onGoToToday()
+                }) {
                     Text(stringResource(R.string.today))
                 }
             }
-            IconButton(onClick = onNextDay) {
+            IconButton(onClick = {
+                haptics.tick()
+                onNextDay()
+            }) {
                 Icon(Icons.Filled.ChevronRight, contentDescription = stringResource(R.string.next_day))
             }
         }

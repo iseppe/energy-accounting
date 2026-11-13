@@ -27,6 +27,7 @@ class AdjustableClock(
     private val systemClock: Clock = Clock.systemDefaultZone(),
 ) : Clock() {
 
+    @Volatile
     private var fake: ZonedDateTime? = null
 
     private val _state = MutableStateFlow(stateFor(fake))
@@ -34,8 +35,12 @@ class AdjustableClock(
 
     override fun getZone(): ZoneId = systemClock.zone
 
-    override fun withZone(zone: ZoneId): Clock =
-        if (zone == getZone()) this else AdjustableClock(systemClock.withZone(zone))
+    override fun withZone(zone: ZoneId): Clock {
+        if (zone == getZone()) return this
+        val copy = AdjustableClock(systemClock.withZone(zone))
+        fake?.let { copy.setFakeDateTime(it.toLocalDate(), it.toLocalTime()) }
+        return copy
+    }
 
     override fun instant(): Instant = fake?.toInstant() ?: systemClock.instant()
 

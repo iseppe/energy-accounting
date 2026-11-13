@@ -1,6 +1,7 @@
 package com.empathie.energyaccounting.ui
 
 import android.content.Context
+import android.os.Looper
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.empathie.energyaccounting.data.diagnostics.AdjustableClock
@@ -19,6 +20,7 @@ import com.empathie.energyaccounting.domain.model.Entry
 import com.empathie.energyaccounting.domain.model.SystemDimensionKey
 import com.empathie.energyaccounting.domain.model.TimeSlot
 import com.empathie.energyaccounting.reminder.ReminderScheduler
+import com.empathie.energyaccounting.reminder.SlotEvaluationResult
 import com.empathie.energyaccounting.ui.insights.InsightsPeriod
 import com.empathie.energyaccounting.ui.insights.InsightsViewModel
 import com.empathie.energyaccounting.ui.manage.ManageExportViewModel
@@ -34,9 +36,11 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
@@ -188,5 +192,57 @@ class ManageExportViewModelTest {
         viewModel.disableDevMode()
         assertFalse(viewModel.devModeEnabled.value)
         assertFalse(viewModel.fakeClockState.value.isEnabled)
+    }
+
+    @Test
+    fun `evaluateSlotAtCurrentClock reports Posted then Suppressed from the injected repository`() = runTest {
+        val repo = EnergyAccountingRepository(db1)
+        val clock = AdjustableClock(
+            Clock.fixed(Instant.parse("2026-11-13T08:00:00Z"), ZoneId.of("UTC"))
+        )
+        clock.setFakeDateTime(LocalDate.of(2026, 11, 13), LocalTime.of(9, 29))
+        val viewModel = viewModel(repo, clock)
+
+        val first = viewModel.evaluateSlotAtCurrentClock(context, TimeSlot.EARLY_MORNING)
+        assertEquals(
+            SlotEvaluationResult.Posted(LocalDate.of(2026, 11, 13), TimeSlot.EARLY_MORNING),
+            first,
+        )
+        assertEquals(first, viewModel.lastSlotEvaluation.value)
+
+        val cognitive = repo.observeActiveDimensions().first()
+            .first { it.systemKey == SystemDimensionKey.COGNITIVE }
+        repo.saveEntry(
+            Entry(
+                0L,
+                LocalDate.of(2026, 11, 13),
+                TimeSlot.EARLY_MORNING,
+                "ansia per multa treno",
+                null,
+                Direction.SPEND,
+                15,
+                cognitive,
+                1_000L,
+            )
+        )
+
+        val second = viewModel.evaluateSlotAtCurrentClock(context, TimeSlot.EARLY_MORNING)
+        assertTrue(second is SlotEvaluationResult.SuppressedEntriesExist)
+        assertEquals(second, viewModel.lastSlotEvaluation.value)
+    }
+
+    @Test
+    fun `fake clock shifts the Insights Today period`() = runTest {
+        val adjustable = AdjustableClock(
+            Clock.fixed(Instant.parse("2026-11-13T08:00:00Z"), ZoneId.of("UTC"))
+        )
+        val viewModel = InsightsViewModel(EnergyAccountingRepository(db1), adjustable)
+        assertEquals(LocalDate.of(2026, 11, 13), viewModel.state.value.startDate)
+
+        adjustable.setFakeDateTime(LocalDate.of(2026, 11, 20), LocalTime.of(9, 29))
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(LocalDate.of(2026, 11, 20), viewModel.state.value.startDate)
+        assertEquals(LocalDate.of(2026, 11, 20), viewModel.state.value.endDate)
     }
 }
