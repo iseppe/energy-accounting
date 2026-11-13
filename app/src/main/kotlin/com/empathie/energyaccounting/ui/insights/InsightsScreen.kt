@@ -269,6 +269,7 @@ private fun PeriodSummaryCard(insights: PeriodInsights) {
                     colors.net,
                     Modifier.weight(1f),
                 )
+                Spacer(Modifier.weight(1f))
                 SummaryValue(
                     stringResource(R.string.active_days),
                     insights.activeDaysCount.toString(),
@@ -296,6 +297,7 @@ private fun SummaryValue(
             style = MaterialTheme.typography.labelSmall,
             color = LocalEmpathieColors.current.onSurfaceMuted,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
         )
         Text(
             text = value,
@@ -303,6 +305,7 @@ private fun SummaryValue(
             fontWeight = FontWeight.Bold,
             color = color,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

@@ -49,6 +49,7 @@ import com.empathie.energyaccounting.domain.model.TimeSlot
 import com.empathie.energyaccounting.domain.service.EnergyFormatter
 import com.empathie.energyaccounting.ui.common.EnergyDirectionAndValueSelector
 import com.empathie.energyaccounting.ui.common.LocalAppHaptics
+import com.empathie.energyaccounting.ui.common.SelectablePill
 import com.empathie.energyaccounting.ui.theme.LocalEmpathieColors
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -357,33 +358,6 @@ private fun SectionLabel(text: String) {
         fontWeight = FontWeight.SemiBold,
         color = LocalEmpathieColors.current.onSurfaceMuted,
     )
-}
-
-@Composable
-private fun SelectablePill(
-    label: String,
-    selected: Boolean,
-    accent: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary,
-    onClick: () -> Unit,
-) {
-    val colors = LocalEmpathieColors.current
-    val haptics = LocalAppHaptics.current
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = if (selected) accent.copy(alpha = 0.18f) else colors.surfaceRaised,
-        border = BorderStroke(1.dp, if (selected) accent else colors.border),
-        modifier = Modifier.clickable {
-            haptics.tick()
-            onClick()
-        },
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = if (selected) accent else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
-        )
-    }
 }
 
 @Composable

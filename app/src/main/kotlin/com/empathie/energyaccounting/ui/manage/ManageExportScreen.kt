@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,7 +42,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -85,6 +85,7 @@ import com.empathie.energyaccounting.reminder.SlotEvaluationResult
 import com.empathie.energyaccounting.ui.common.DateField
 import com.empathie.energyaccounting.ui.common.EnergyDirectionAndValueSelector
 import com.empathie.energyaccounting.ui.common.LocalAppHaptics
+import com.empathie.energyaccounting.ui.common.SelectablePill
 import com.empathie.energyaccounting.ui.daily.dimensionLabel
 import com.empathie.energyaccounting.ui.daily.timeSlotLabel
 import com.empathie.energyaccounting.ui.theme.LocalEmpathieColors
@@ -291,21 +292,14 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
             SectionCard(title = stringResource(R.string.appearance)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ThemeMode.entries.forEach { mode ->
-                        FilterChip(
+                        SelectablePill(
+                            label = when (mode) {
+                                ThemeMode.SYSTEM -> stringResource(R.string.theme_system)
+                                ThemeMode.DARK -> stringResource(R.string.theme_dark)
+                                ThemeMode.LIGHT -> stringResource(R.string.theme_light)
+                            },
                             selected = themeMode == mode,
-                            onClick = {
-                                haptics.tick()
-                                viewModel.setThemeMode(mode)
-                            },
-                            label = {
-                                Text(
-                                    when (mode) {
-                                        ThemeMode.SYSTEM -> stringResource(R.string.theme_system)
-                                        ThemeMode.DARK -> stringResource(R.string.theme_dark)
-                                        ThemeMode.LIGHT -> stringResource(R.string.theme_light)
-                                    }
-                                )
-                            },
+                            onClick = { viewModel.setThemeMode(mode) },
                         )
                     }
                 }
@@ -318,21 +312,16 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                 )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AppLanguage.entries.forEach { language ->
-                        FilterChip(
+                        SelectablePill(
+                            label = when (language) {
+                                AppLanguage.SYSTEM -> stringResource(R.string.language_system)
+                                AppLanguage.ENGLISH -> stringResource(R.string.language_english)
+                                AppLanguage.ITALIAN -> stringResource(R.string.language_italian)
+                            },
                             selected = appLanguage == language,
                             onClick = {
-                                haptics.tick()
                                 viewModel.setAppLanguage(language)
                                 activity?.recreate()
-                            },
-                            label = {
-                                Text(
-                                    when (language) {
-                                        AppLanguage.SYSTEM -> stringResource(R.string.language_system)
-                                        AppLanguage.ENGLISH -> stringResource(R.string.language_english)
-                                        AppLanguage.ITALIAN -> stringResource(R.string.language_italian)
-                                    }
-                                )
                             },
                         )
                     }
@@ -359,10 +348,13 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
             SectionCard(
                 title = stringResource(R.string.activity_templates),
                 action = {
-                    IconButton(onClick = {
-                        haptics.tick()
-                        showCreateTemplate = true
-                    }) {
+                    IconButton(
+                        onClick = {
+                            haptics.tick()
+                            showCreateTemplate = true
+                        },
+                        modifier = Modifier.size(32.dp),
+                    ) {
                         Icon(
                             Icons.Filled.Add,
                             contentDescription = stringResource(R.string.create),
@@ -386,10 +378,13 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
             SectionCard(
                 title = stringResource(R.string.energy_dimensions_management),
                 action = {
-                    IconButton(onClick = {
-                        haptics.tick()
-                        showAddDimension = true
-                    }) {
+                    IconButton(
+                        onClick = {
+                            haptics.tick()
+                            showAddDimension = true
+                        },
+                        modifier = Modifier.size(32.dp),
+                    ) {
                         Icon(
                             Icons.Filled.Add,
                             contentDescription = stringResource(R.string.add_custom_dimension),
@@ -655,13 +650,10 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                     )
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(TimeSlot.entries) { slot ->
-                            FilterChip(
+                            SelectablePill(
+                                label = timeSlotLabel(context, slot),
                                 selected = selectedDevSlot == slot,
-                                onClick = {
-                                    haptics.tick()
-                                    selectedDevSlot = slot
-                                },
-                                label = { Text(timeSlotLabel(context, slot)) },
+                                onClick = { selectedDevSlot = slot },
                             )
                         }
                     }
@@ -986,13 +978,10 @@ private fun TemplateEditDialog(
                 )
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(selectableDimensions, key = { it.id }) { dimension ->
-                        FilterChip(
+                        SelectablePill(
+                            label = dimensionChipLabel(context, dimension),
                             selected = dimensionId == dimension.id,
-                            onClick = {
-                                haptics.tick()
-                                dimensionId = dimension.id
-                            },
-                            label = { Text(dimensionChipLabel(context, dimension)) },
+                            onClick = { dimensionId = dimension.id },
                         )
                     }
                 }
@@ -1209,7 +1198,9 @@ private fun SectionCard(
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 32.dp),
             ) {
                 Text(
                     text = title,

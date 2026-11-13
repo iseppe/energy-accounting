@@ -8,8 +8,8 @@
     <string name="previous_day">Giorno precedente</string>
     <string name="next_day">Giorno successivo</string>
     <string name="open_calendar">Apri lo storico</string>
-    <string name="total_gain">Guadagno (+)</string>
-    <string name="total_spend">Consumo (−)</string>
+    <string name="total_gain">Guadagno</string>
+    <string name="total_spend">Consumo</string>
     <string name="net_balance">Saldo netto</string>
     <string name="no_entries">Nessuna voce</string>
     <string name="add_entry">Aggiungi voce</string>

@@ -32,12 +32,12 @@
     "it": "Apri lo storico"
   },
   "total_gain": {
-    "en": "Gain (+)",
-    "it": "Guadagno (+)"
+    "en": "Gain",
+    "it": "Guadagno"
   },
   "total_spend": {
-    "en": "Spend (−)",
-    "it": "Consumo (−)"
+    "en": "Spend",
+    "it": "Consumo"
   },
   "net_balance": {
     "en": "Net Balance",

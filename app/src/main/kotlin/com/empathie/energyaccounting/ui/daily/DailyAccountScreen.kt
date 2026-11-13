@@ -385,6 +385,7 @@ private fun SummaryPill(
             style = MaterialTheme.typography.labelSmall,
             color = LocalEmpathieColors.current.onSurfaceMuted,
             textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
         )
         Text(
             text = value,
@@ -392,6 +393,7 @@ private fun SummaryPill(
             fontWeight = FontWeight.Bold,
             color = color,
             textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }
