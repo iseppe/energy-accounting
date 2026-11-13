@@ -1,0 +1,630 @@
+{
+  "app_name": {
+    "en": "Energy Accounting",
+    "it": "Energy Accounting"
+  },
+  "tab_daily_account": {
+    "en": "Daily Account",
+    "it": "Bilancio giornaliero"
+  },
+  "tab_insights": {
+    "en": "Insights",
+    "it": "Panoramica"
+  },
+  "tab_manage": {
+    "en": "Manage & Export",
+    "it": "Gestisci ed esporta"
+  },
+  "today": {
+    "en": "Today",
+    "it": "Oggi"
+  },
+  "previous_day": {
+    "en": "Previous day",
+    "it": "Giorno precedente"
+  },
+  "next_day": {
+    "en": "Next day",
+    "it": "Giorno successivo"
+  },
+  "open_calendar": {
+    "en": "Open calendar history",
+    "it": "Apri lo storico"
+  },
+  "total_gain": {
+    "en": "Gain (+)",
+    "it": "Guadagno (+)"
+  },
+  "total_spend": {
+    "en": "Spend (−)",
+    "it": "Consumo (−)"
+  },
+  "net_balance": {
+    "en": "Net Balance",
+    "it": "Saldo netto"
+  },
+  "no_entries": {
+    "en": "No entries",
+    "it": "Nessuna voce"
+  },
+  "add_entry": {
+    "en": "Add Entry",
+    "it": "Aggiungi voce"
+  },
+  "edit_entry": {
+    "en": "Edit Entry",
+    "it": "Modifica voce"
+  },
+  "add_entry_for_slot": {
+    "en": "Add entry for %1$s",
+    "it": "Aggiungi voce per %1$s"
+  },
+  "edit_entry_for_slot": {
+    "en": "Edit entry for %1$s",
+    "it": "Modifica voce per %1$s"
+  },
+  "add_entry_to_slot": {
+    "en": "Add entry to %1$s",
+    "it": "Aggiungi voce a %1$s"
+  },
+  "calendar_history": {
+    "en": "History",
+    "it": "Storico"
+  },
+  "previous_month": {
+    "en": "Previous month",
+    "it": "Mese precedente"
+  },
+  "next_month": {
+    "en": "Next month",
+    "it": "Mese successivo"
+  },
+  "close": {
+    "en": "Close",
+    "it": "Chiudi"
+  },
+  "future_date_warning_title": {
+    "en": "Future date",
+    "it": "Data futura"
+  },
+  "future_date_warning_body": {
+    "en": "You are adding an entry for %1$s, which is in the future. Do you want to continue?",
+    "it": "Stai aggiungendo una voce per %1$s, che è una data futura. Vuoi continuare?"
+  },
+  "continue_action": {
+    "en": "Continue",
+    "it": "Continua"
+  },
+  "go_back": {
+    "en": "Go back",
+    "it": "Torna indietro"
+  },
+  "time_slot_early_morning": {
+    "en": "Early Morning",
+    "it": "Mattina presto"
+  },
+  "time_slot_late_morning": {
+    "en": "Late Morning",
+    "it": "Tarda mattina"
+  },
+  "time_slot_afternoon": {
+    "en": "Afternoon",
+    "it": "Pomeriggio"
+  },
+  "time_slot_evening": {
+    "en": "Evening",
+    "it": "Sera"
+  },
+  "pinned_templates": {
+    "en": "Pinned templates",
+    "it": "Modelli fissati"
+  },
+  "all_templates": {
+    "en": "All saved templates",
+    "it": "Tutti i modelli salvati"
+  },
+  "more_templates": {
+    "en": "...",
+    "it": "..."
+  },
+  "activity": {
+    "en": "Activity",
+    "it": "Attività"
+  },
+  "activity_placeholder": {
+    "en": "e.g. Morning routine",
+    "it": "es. Routine del mattino"
+  },
+  "situational_note": {
+    "en": "Situational note (optional)",
+    "it": "Nota situazionale (opzionale)"
+  },
+  "situational_note_placeholder": {
+    "en": "e.g. Delayed train, loud crowd",
+    "it": "es. Treno in ritardo, folla rumorosa"
+  },
+  "time_slot": {
+    "en": "Time Slot",
+    "it": "Fascia oraria"
+  },
+  "direction_and_value": {
+    "en": "Direction & Energy Value",
+    "it": "Direzione e valore energetico"
+  },
+  "direction_spend": {
+    "en": "Spend (drain)",
+    "it": "Consumo (dispersione)"
+  },
+  "direction_gain": {
+    "en": "Gain (recharge)",
+    "it": "Guadagno (ricarica)"
+  },
+  "energy_value": {
+    "en": "Energy Value",
+    "it": "Valore energetico"
+  },
+  "energy_dimensions": {
+    "en": "Energy Dimension",
+    "it": "Dimensione energetica"
+  },
+  "dimensions_hint": {
+    "en": "Select one dimension for this entry.",
+    "it": "Seleziona una dimensione per questa voce."
+  },
+  "update_default_template": {
+    "en": "Update default template for \"%1$s\"",
+    "it": "Aggiorna il modello predefinito per \"%1$s\""
+  },
+  "save": {
+    "en": "Save",
+    "it": "Salva"
+  },
+  "cancel": {
+    "en": "Cancel",
+    "it": "Annulla"
+  },
+  "delete": {
+    "en": "Delete",
+    "it": "Elimina"
+  },
+  "edit": {
+    "en": "Edit",
+    "it": "Modifica"
+  },
+  "entry_deleted": {
+    "en": "Entry deleted",
+    "it": "Voce eliminata"
+  },
+  "undo": {
+    "en": "Undo",
+    "it": "Annulla"
+  },
+  "delete_entry_confirmation": {
+    "en": "Delete this entry?",
+    "it": "Eliminare questa voce?"
+  },
+  "dimension_physical": {
+    "en": "Physical",
+    "it": "Fisico"
+  },
+  "dimension_cognitive": {
+    "en": "Cognitive",
+    "it": "Cognitivo"
+  },
+  "dimension_sensory": {
+    "en": "Sensory",
+    "it": "Sensoriale"
+  },
+  "dimension_social": {
+    "en": "Social",
+    "it": "Sociale"
+  },
+  "dimension_emotional": {
+    "en": "Emotional",
+    "it": "Emotivo"
+  },
+  "today_period": {
+    "en": "Today",
+    "it": "Oggi"
+  },
+  "last_7_days": {
+    "en": "Last 7 days",
+    "it": "Ultimi 7 giorni"
+  },
+  "last_30_days": {
+    "en": "Last 30 days",
+    "it": "Ultimi 30 giorni"
+  },
+  "custom_range": {
+    "en": "Custom range",
+    "it": "Intervallo personalizzato"
+  },
+  "period_summary": {
+    "en": "Period summary",
+    "it": "Riepilogo del periodo"
+  },
+  "average_daily_net": {
+    "en": "Average daily net",
+    "it": "Saldo medio giornaliero"
+  },
+  "active_days": {
+    "en": "Days logged",
+    "it": "Giorni registrati"
+  },
+  "spend_by_dimension": {
+    "en": "Spend by dimension",
+    "it": "Consumo per dimensione"
+  },
+  "gain_by_dimension": {
+    "en": "Gain by dimension",
+    "it": "Guadagno per dimensione"
+  },
+  "by_time_slot": {
+    "en": "By time slot",
+    "it": "Per fascia oraria"
+  },
+  "per_day": {
+    "en": "/day",
+    "it": "/giorno"
+  },
+  "activity_templates": {
+    "en": "Activity Templates",
+    "it": "Modelli di attività"
+  },
+  "energy_dimensions_management": {
+    "en": "Energy Dimensions",
+    "it": "Dimensioni energetiche"
+  },
+  "check_in_reminders": {
+    "en": "Check-in Reminders",
+    "it": "Promemoria"
+  },
+  "appearance": {
+    "en": "Appearance",
+    "it": "Aspetto"
+  },
+  "theme_system": {
+    "en": "System",
+    "it": "Sistema"
+  },
+  "theme_dark": {
+    "en": "Dark",
+    "it": "Scuro"
+  },
+  "theme_light": {
+    "en": "Light",
+    "it": "Chiaro"
+  },
+  "language": {
+    "en": "Language",
+    "it": "Lingua"
+  },
+  "language_system": {
+    "en": "System",
+    "it": "Sistema"
+  },
+  "language_english": {
+    "en": "English",
+    "it": "English"
+  },
+  "language_italian": {
+    "en": "Italiano",
+    "it": "Italiano"
+  },
+  "export_practitioner_pdf": {
+    "en": "Export Practitioner PDF Report",
+    "it": "Esporta report PDF per il professionista"
+  },
+  "export_csv": {
+    "en": "Export CSV",
+    "it": "Esporta CSV"
+  },
+  "export_json_backup": {
+    "en": "Export JSON Backup",
+    "it": "Esporta backup JSON"
+  },
+  "export_debug_log": {
+    "en": "Export debug log",
+    "it": "Esporta log di debug"
+  },
+  "restore_json_backup": {
+    "en": "Restore JSON Backup",
+    "it": "Ripristina backup JSON"
+  },
+  "restore_mode_merge": {
+    "en": "Merge without duplicates",
+    "it": "Unisci senza duplicati"
+  },
+  "restore_mode_replace": {
+    "en": "Replace all local data",
+    "it": "Sostituisci tutti i dati locali"
+  },
+  "add_custom_dimension": {
+    "en": "Add custom dimension",
+    "it": "Aggiungi dimensione personalizzata"
+  },
+  "dimension_name": {
+    "en": "Dimension name",
+    "it": "Nome della dimensione"
+  },
+  "dimension_name_in_use": {
+    "en": "A dimension with this name already exists",
+    "it": "Esiste già una dimensione con questo nome"
+  },
+  "dimension_archived": {
+    "en": "archived",
+    "it": "archiviata"
+  },
+  "archive": {
+    "en": "Archive",
+    "it": "Archivia"
+  },
+  "unarchive": {
+    "en": "Unarchive",
+    "it": "Ripristina"
+  },
+  "pin": {
+    "en": "Pin",
+    "it": "Fissa"
+  },
+  "unpin": {
+    "en": "Unpin",
+    "it": "Rimuovi"
+  },
+  "create": {
+    "en": "Create",
+    "it": "Crea"
+  },
+  "default_direction": {
+    "en": "Default direction",
+    "it": "Direzione predefinita"
+  },
+  "default_value": {
+    "en": "Default energy value",
+    "it": "Valore energetico predefinito"
+  },
+  "default_dimension": {
+    "en": "Energy Dimension",
+    "it": "Dimensione energetica"
+  },
+  "reminder_slot_description": {
+    "en": "Reminds you only when %1$s has no entries yet.",
+    "it": "Ti ricorda solo se %1$s non ha ancora voci."
+  },
+  "notification_channel_name": {
+    "en": "Check-in reminders",
+    "it": "Promemoria"
+  },
+  "notification_channel_description": {
+    "en": "Gentle local reminders to log entries for a time slot.",
+    "it": "Promemoria locali e discreti per registrare le voci di una fascia oraria."
+  },
+  "notification_title": {
+    "en": "Time to check in",
+    "it": "È ora di fare il punto"
+  },
+  "notification_body": {
+    "en": "No entries logged for %1$s yet. Tap to add one.",
+    "it": "Nessuna voce registrata per %1$s. Tocca per aggiungerne una."
+  },
+  "reminder_permission_rationale": {
+    "en": "Notifications let the app remind you to log entries. Without them, reminders stay silent.",
+    "it": "Le notifiche permettono all'app di ricordarti di registrare le voci. Senza di esse i promemoria restano silenziosi."
+  },
+  "send_test_notification": {
+    "en": "Send test notification",
+    "it": "Invia notifica di prova"
+  },
+  "test_notification_sent": {
+    "en": "Test notification sent",
+    "it": "Notifica di prova inviata"
+  },
+  "select_date_range": {
+    "en": "Select date range",
+    "it": "Seleziona intervallo di date"
+  },
+  "start_date": {
+    "en": "Start date",
+    "it": "Data iniziale"
+  },
+  "end_date": {
+    "en": "End date",
+    "it": "Data finale"
+  },
+  "apply": {
+    "en": "Apply",
+    "it": "Applica"
+  },
+  "export_failed": {
+    "en": "Export failed",
+    "it": "Esportazione non riuscita"
+  },
+  "restore_complete": {
+    "en": "Backup restored",
+    "it": "Backup ripristinato"
+  },
+  "restore_failed": {
+    "en": "Restore failed",
+    "it": "Ripristino non riuscito"
+  },
+  "template_name_in_use": {
+    "en": "A template with this name already exists",
+    "it": "Esiste già un modello con questo nome"
+  },
+  "build_id_label": {
+    "en": "Build: %1$s",
+    "it": "Build: %1$s"
+  },
+  "pdf_report_title": {
+    "en": "Daily Energy Account",
+    "it": "Bilancio energetico giornaliero"
+  },
+  "pdf_period_label": {
+    "en": "Period",
+    "it": "Periodo"
+  },
+  "pdf_period_summary": {
+    "en": "Period summary",
+    "it": "Riepilogo del periodo"
+  },
+  "pdf_days_logged": {
+    "en": "Days logged",
+    "it": "Giorni registrati"
+  },
+  "pdf_average_daily_net": {
+    "en": "Average daily net",
+    "it": "Saldo medio giornaliero"
+  },
+  "pdf_spend_by_primary": {
+    "en": "Spend by dimension",
+    "it": "Consumo per dimensione"
+  },
+  "pdf_gain_by_primary": {
+    "en": "Gain by dimension",
+    "it": "Guadagno per dimensione"
+  },
+  "pdf_by_time_slot": {
+    "en": "By time slot",
+    "it": "Per fascia oraria"
+  },
+  "pdf_daily_totals": {
+    "en": "Daily totals",
+    "it": "Totali giornalieri"
+  },
+  "pdf_column_date_slot": {
+    "en": "Date / Time Slot",
+    "it": "Data / Fascia oraria"
+  },
+  "pdf_column_activity": {
+    "en": "Activity & Situational Note",
+    "it": "Attività e nota situazionale"
+  },
+  "pdf_column_dimension": {
+    "en": "Dimension",
+    "it": "Dimensione"
+  },
+  "pdf_column_value": {
+    "en": "Value",
+    "it": "Valore"
+  },
+  "pdf_summary_gain": {
+    "en": "Total gain",
+    "it": "Guadagno totale"
+  },
+  "pdf_summary_spend": {
+    "en": "Total spend",
+    "it": "Consumo totale"
+  },
+  "pdf_summary_net": {
+    "en": "Net balance",
+    "it": "Saldo netto"
+  },
+  "vibration_feedback": {
+    "en": "Vibration feedback",
+    "it": "Feedback con vibrazione"
+  },
+  "energy_trend_chart": {
+    "en": "Energy trend",
+    "it": "Andamento energetico"
+  },
+  "share_pdf": {
+    "en": "Share PDF",
+    "it": "Condividi PDF"
+  },
+  "save_pdf": {
+    "en": "Save PDF",
+    "it": "Salva PDF"
+  },
+  "dev_mode_title": {
+    "en": "Developer Mode",
+    "it": "Modalità sviluppatore"
+  },
+  "dev_mode_enabled_toast": {
+    "en": "Developer mode enabled",
+    "it": "Modalità sviluppatore attivata"
+  },
+  "dev_mode_disable": {
+    "en": "Disable Developer Mode",
+    "it": "Disattiva modalità sviluppatore"
+  },
+  "dev_mode_hint": {
+    "en": "Tap the build ID 5 times to toggle Developer Mode",
+    "it": "Tocca l'ID build 5 volte per attivare la modalità sviluppatore"
+  },
+  "fake_clock_enable": {
+    "en": "Use fake clock",
+    "it": "Usa orologio simulato"
+  },
+  "fake_clock_label": {
+    "en": "Fake clock (dd/MM/yyyy HH:mm)",
+    "it": "Orologio simulato (dd/MM/yyyy HH:mm)"
+  },
+  "fake_clock_reset": {
+    "en": "Reset to system clock",
+    "it": "Ripristina orologio di sistema"
+  },
+  "fake_clock_advance": {
+    "en": "+1 minute",
+    "it": "+1 minuto"
+  },
+  "dev_slot_evaluator": {
+    "en": "Slot notification test",
+    "it": "Test notifica fascia oraria"
+  },
+  "dev_evaluate_slot": {
+    "en": "Evaluate slot now",
+    "it": "Valuta fascia oraria"
+  },
+  "dev_fire_alarm_5s": {
+    "en": "Fire OS alarm in 5s",
+    "it": "Avvia sveglia di sistema tra 5s"
+  },
+  "dev_alarm_scheduled_5s": {
+    "en": "OS alarm scheduled in 5 seconds",
+    "it": "Sveglia di sistema programmata tra 5 secondi"
+  },
+  "dev_status_notifications": {
+    "en": "Notifications",
+    "it": "Notifiche"
+  },
+  "dev_status_exact_alarms": {
+    "en": "Exact alarms",
+    "it": "Sveglie esatte"
+  },
+  "dev_grant_exact_alarm": {
+    "en": "Grant exact alarm permission",
+    "it": "Concedi permesso sveglie esatte"
+  },
+  "dev_result_posted": {
+    "en": "Posted notification for %1$s on %2$s",
+    "it": "Notifica inviata per %1$s il %2$s"
+  },
+  "dev_result_suppressed": {
+    "en": "Suppressed: %2$s already has %1$d entries on %3$s",
+    "it": "Soppressa: %2$s ha già %1$d voci il %3$s"
+  },
+  "dev_result_blocked": {
+    "en": "Blocked: notifications are disabled for this app",
+    "it": "Bloccata: le notifiche sono disattivate per questa app"
+  },
+  "dev_force_post": {
+    "en": "Force post regardless of entries",
+    "it": "Forza invio indipendentemente dalle voci"
+  },
+  "slot_short_early": {
+    "en": "Early",
+    "it": "Presto"
+  },
+  "slot_short_late": {
+    "en": "Late",
+    "it": "Tarda"
+  },
+  "slot_short_afternoon": {
+    "en": "Aftern.",
+    "it": "Pomer."
+  },
+  "slot_short_evening": {
+    "en": "Evening",
+    "it": "Sera"
+  }
+}

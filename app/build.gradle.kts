@@ -1,4 +1,6 @@
+import groovy.json.JsonSlurper
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.File
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -106,4 +108,59 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
+}
+
+// ---- Single-file translation catalog -----------------------------------------
+// `app/translations.json` is the source of truth for every user-facing string.
+// This task regenerates the Android resource files and the assets copy on every build,
+// failing if a key is missing either language.
+
+val translationsFile = layout.projectDirectory.file("translations.json")
+val valuesStrings = layout.projectDirectory.file("src/main/res/values/strings.xml")
+val valuesItStrings = layout.projectDirectory.file("src/main/res/values-it/strings.xml")
+val assetsTranslations = layout.projectDirectory.file("src/main/assets/translations.json")
+
+val syncTranslations by tasks.registering {
+    group = "build"
+    description = "Generates res/values(-it)/strings.xml from translations.json"
+
+    inputs.file(translationsFile)
+    outputs.files(valuesStrings, valuesItStrings, assetsTranslations)
+
+    doLast {
+        @Suppress("UNCHECKED_CAST")
+        val catalog = JsonSlurper().parse(translationsFile.asFile) as Map<String, Map<String, String>>
+
+        fun escape(value: String): String = value
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("'", "\\'")
+            .replace("\"", "\\\"")
+
+        fun write(language: String, target: File) {
+            target.parentFile.mkdirs()
+            val xml = buildString {
+                appendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
+                appendLine("<resources>")
+                catalog.forEach { (key, translations) ->
+                    val value = translations[language]?.takeIf { it.isNotBlank() }
+                        ?: throw GradleException("Missing '$language' translation for '$key'")
+                    appendLine("    <string name=\"$key\">${escape(value)}</string>")
+                }
+                appendLine("</resources>")
+            }
+            target.writeText(xml)
+        }
+
+        write("en", valuesStrings.asFile)
+        write("it", valuesItStrings.asFile)
+
+        assetsTranslations.asFile.parentFile.mkdirs()
+        assetsTranslations.asFile.writeText(translationsFile.asFile.readText())
+    }
+}
+
+tasks.named("preBuild") {
+    dependsOn(syncTranslations)
 }
