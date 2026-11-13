@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -54,10 +55,9 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 12.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { Spacer(Modifier.height(8.dp)) }
-
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
@@ -215,8 +215,9 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
 
         item {
             SectionCard(title = stringResource(R.string.by_time_slot)) {
+                val showAverage = insights.startDate != insights.endDate
                 insights.byTimeSlot.forEach { summary ->
-                    TimeSlotRow(summary)
+                    TimeSlotRow(summary, showAverage = showAverage)
                 }
             }
         }
@@ -238,26 +239,41 @@ private fun PeriodSummaryCard(insights: PeriodInsights) {
                     EnergyFormatter.formatDate(insights.endDate),
                 style = MaterialTheme.typography.labelMedium,
                 color = colors.onSurfaceMuted,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
             )
-            Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                SummaryValue(stringResource(R.string.total_gain), EnergyFormatter.formatGainTotal(insights.totalGain), colors.gain)
-                SummaryValue(stringResource(R.string.total_spend), EnergyFormatter.formatSpendTotal(insights.totalSpend), colors.spend)
+            Row(modifier = Modifier.fillMaxWidth()) {
+                SummaryValue(
+                    stringResource(R.string.total_gain),
+                    EnergyFormatter.formatGainTotal(insights.totalGain),
+                    colors.gain,
+                    Modifier.weight(1f),
+                )
+                SummaryValue(
+                    stringResource(R.string.total_spend),
+                    EnergyFormatter.formatSpendTotal(insights.totalSpend),
+                    colors.spend,
+                    Modifier.weight(1f),
+                )
                 SummaryValue(
                     stringResource(R.string.net_balance),
                     EnergyFormatter.formatNetBalance(insights.netBalance),
                     colors.net,
+                    Modifier.weight(1f),
                 )
             }
-            Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.fillMaxWidth()) {
                 SummaryValue(
                     stringResource(R.string.average_daily_net),
                     EnergyFormatter.formatNetBalance(insights.averageDailyNet),
                     colors.net,
+                    Modifier.weight(1f),
                 )
                 SummaryValue(
                     stringResource(R.string.active_days),
                     insights.activeDaysCount.toString(),
                     colors.onSurfaceMuted,
+                    Modifier.weight(1f),
                 )
             }
         }
@@ -265,18 +281,28 @@ private fun PeriodSummaryCard(insights: PeriodInsights) {
 }
 
 @Composable
-private fun SummaryValue(label: String, value: String, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun SummaryValue(
+    label: String,
+    value: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             color = LocalEmpathieColors.current.onSurfaceMuted,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
             fontWeight = FontWeight.Bold,
             color = color,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
     }
 }
@@ -361,23 +387,62 @@ private fun DimensionBar(
 }
 
 @Composable
-private fun TimeSlotRow(summary: TimeSlotImpactSummary) {
+private fun TimeSlotRow(summary: TimeSlotImpactSummary, showAverage: Boolean) {
     val context = LocalContext.current
     val colors = LocalEmpathieColors.current
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    val netColor = when {
+        summary.netBalance > 0 -> colors.gain
+        summary.netBalance < 0 -> colors.spend
+        else -> colors.net
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
         Text(
             text = timeSlotLabel(context, summary.timeSlot),
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = EnergyFormatter.formatGainTotal(summary.totalGain) + " / " +
-                EnergyFormatter.formatSpendTotal(summary.totalSpend) + "  ·  " +
-                EnergyFormatter.formatNetBalance(summary.netBalance) + "  ·  " +
-                EnergyFormatter.formatNetBalance(summary.averageNetPerActiveDay) +
-                context.getString(R.string.per_day),
+            text = EnergyFormatter.formatGainTotal(summary.totalGain),
+            style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+            color = colors.gain,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            modifier = Modifier.width(38.dp),
+        )
+        Text(
+            text = " / ",
             style = MaterialTheme.typography.labelSmall,
             color = colors.onSurfaceMuted,
         )
+        Text(
+            text = EnergyFormatter.formatSpendTotal(summary.totalSpend),
+            style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+            color = colors.spend,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            modifier = Modifier.width(42.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = EnergyFormatter.formatNetBalance(summary.netBalance),
+            style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+            fontWeight = FontWeight.Bold,
+            color = netColor,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            modifier = Modifier.width(42.dp),
+        )
+        if (showAverage) {
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = EnergyFormatter.formatNetBalance(summary.averageNetPerActiveDay) +
+                    context.getString(R.string.per_day),
+                style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+                color = colors.onSurfaceMuted,
+                textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                modifier = Modifier.width(62.dp),
+            )
+        }
     }
 }

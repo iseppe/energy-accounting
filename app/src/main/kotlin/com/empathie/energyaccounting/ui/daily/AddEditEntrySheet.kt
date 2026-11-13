@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -166,7 +167,10 @@ internal fun AddEditEntrySheet(
             }
 
             if (draft.matchedTemplate != null && draft.hasModifiedTemplateDefaults) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.offset(x = (-12).dp),
+                ) {
                     Checkbox(
                         checked = draft.updateTemplateDefaults,
                         onCheckedChange = { checked ->

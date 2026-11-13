@@ -4,9 +4,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledTonalButton
@@ -89,13 +91,15 @@ fun EnergyDirectionAndValueSelector(
                 onClick = {
                     haptics.tick()
                     onEnergyValueChange((energyValue - 5).coerceAtLeast(5))
-                }
+                },
+                modifier = Modifier.width(72.dp),
+                contentPadding = PaddingValues(0.dp),
             ) {
                 Text("-5")
             }
             Text(
                 text = EnergyFormatter.formatSignedValue(direction, energyValue),
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleLarge.copy(fontFeatureSettings = "tnum"),
                 fontWeight = FontWeight.Bold,
                 color = accent,
                 textAlign = TextAlign.Center,
@@ -107,7 +111,9 @@ fun EnergyDirectionAndValueSelector(
                 onClick = {
                     haptics.tick()
                     onEnergyValueChange((energyValue + 5).coerceAtMost(100))
-                }
+                },
+                modifier = Modifier.width(72.dp),
+                contentPadding = PaddingValues(0.dp),
             ) {
                 Text("+5")
             }

@@ -24,12 +24,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
@@ -281,10 +284,9 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 12.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { Spacer(Modifier.height(8.dp)) }
-
         item {
             SectionCard(title = stringResource(R.string.appearance)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -354,13 +356,21 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
         }
 
         item {
-            SectionCard(title = stringResource(R.string.activity_templates)) {
-                TextButton(onClick = {
-                    haptics.tick()
-                    showCreateTemplate = true
-                }) {
-                    Text(stringResource(R.string.create))
-                }
+            SectionCard(
+                title = stringResource(R.string.activity_templates),
+                action = {
+                    IconButton(onClick = {
+                        haptics.tick()
+                        showCreateTemplate = true
+                    }) {
+                        Icon(
+                            Icons.Filled.Add,
+                            contentDescription = stringResource(R.string.create),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                },
+            ) {
                 templates.forEach { template ->
                     TemplateRow(
                         template = template,
@@ -373,13 +383,21 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
         }
 
         item {
-            SectionCard(title = stringResource(R.string.energy_dimensions_management)) {
-                TextButton(onClick = {
-                    haptics.tick()
-                    showAddDimension = true
-                }) {
-                    Text(stringResource(R.string.add_custom_dimension))
-                }
+            SectionCard(
+                title = stringResource(R.string.energy_dimensions_management),
+                action = {
+                    IconButton(onClick = {
+                        haptics.tick()
+                        showAddDimension = true
+                    }) {
+                        Icon(
+                            Icons.Filled.Add,
+                            contentDescription = stringResource(R.string.add_custom_dimension),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                },
+            ) {
                 dimensions.forEach { dimension ->
                     DimensionRow(
                         dimension = dimension,
@@ -1179,17 +1197,28 @@ private fun RestoreModeDialog(
 }
 
 @Composable
-private fun SectionCard(title: String, content: @Composable () -> Unit) {
+private fun SectionCard(
+    title: String,
+    action: (@Composable () -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                action?.invoke()
+            }
             content()
         }
     }
