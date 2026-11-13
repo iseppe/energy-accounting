@@ -16,8 +16,7 @@ class ActivityTemplate(
     activityName: String,
     val defaultDirection: Direction,
     val defaultEnergyValue: Int,
-    val defaultPrimaryDimension: EnergyDimension,
-    defaultSecondaryDimensions: List<EnergyDimension> = emptyList(),
+    val defaultDimension: EnergyDimension,
     val isPinned: Boolean = false,
     val usageCount: Int = 0,
     val lastUsedEpochMillis: Long = 0L,
@@ -33,17 +32,13 @@ class ActivityTemplate(
 
     val activityName: String = activityName.trim()
     val normalizedName: String = activityName.trim().lowercase(Locale.ROOT)
-    val defaultSecondaryDimensions: List<EnergyDimension> = defaultSecondaryDimensions
-        .filterNot { it.id == defaultPrimaryDimension.id }
-        .distinctBy { it.id }
 
     fun copy(
         id: Long = this.id,
         activityName: String = this.activityName,
         defaultDirection: Direction = this.defaultDirection,
         defaultEnergyValue: Int = this.defaultEnergyValue,
-        defaultPrimaryDimension: EnergyDimension = this.defaultPrimaryDimension,
-        defaultSecondaryDimensions: List<EnergyDimension> = this.defaultSecondaryDimensions,
+        defaultDimension: EnergyDimension = this.defaultDimension,
         isPinned: Boolean = this.isPinned,
         usageCount: Int = this.usageCount,
         lastUsedEpochMillis: Long = this.lastUsedEpochMillis,
@@ -52,8 +47,7 @@ class ActivityTemplate(
         activityName = activityName,
         defaultDirection = defaultDirection,
         defaultEnergyValue = defaultEnergyValue,
-        defaultPrimaryDimension = defaultPrimaryDimension,
-        defaultSecondaryDimensions = defaultSecondaryDimensions,
+        defaultDimension = defaultDimension,
         isPinned = isPinned,
         usageCount = usageCount,
         lastUsedEpochMillis = lastUsedEpochMillis,
@@ -66,8 +60,7 @@ class ActivityTemplate(
             activityName == other.activityName &&
             defaultDirection == other.defaultDirection &&
             defaultEnergyValue == other.defaultEnergyValue &&
-            defaultPrimaryDimension == other.defaultPrimaryDimension &&
-            defaultSecondaryDimensions == other.defaultSecondaryDimensions &&
+            defaultDimension == other.defaultDimension &&
             isPinned == other.isPinned &&
             usageCount == other.usageCount &&
             lastUsedEpochMillis == other.lastUsedEpochMillis
@@ -78,8 +71,7 @@ class ActivityTemplate(
         activityName,
         defaultDirection,
         defaultEnergyValue,
-        defaultPrimaryDimension,
-        defaultSecondaryDimensions,
+        defaultDimension,
         isPinned,
         usageCount,
         lastUsedEpochMillis,
@@ -87,7 +79,6 @@ class ActivityTemplate(
 
     override fun toString(): String =
         "ActivityTemplate(id=$id, activityName='$activityName', defaultDirection=$defaultDirection, " +
-            "defaultEnergyValue=$defaultEnergyValue, defaultPrimaryDimension=$defaultPrimaryDimension, " +
-            "defaultSecondaryDimensions=$defaultSecondaryDimensions, isPinned=$isPinned, " +
-            "usageCount=$usageCount, lastUsedEpochMillis=$lastUsedEpochMillis)"
+            "defaultEnergyValue=$defaultEnergyValue, defaultDimension=$defaultDimension, " +
+            "isPinned=$isPinned, usageCount=$usageCount, lastUsedEpochMillis=$lastUsedEpochMillis)"
 }

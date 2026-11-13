@@ -42,7 +42,7 @@ class CheckInReminderReceiverTest {
         assertTrue(CheckInReminderReceiver.shouldPostNotification(db.dao(), today, TimeSlot.EVENING))
 
         val dim = db.dao().observeAllDimensions().first().first()
-        db.dao().insertEntryWithSecondaries(
+        db.dao().insertEntry(
             EntryEntity(
                 dateIso = today.toString(),
                 timeSlot = TimeSlot.EVENING.name,
@@ -50,10 +50,9 @@ class CheckInReminderReceiverTest {
                 situationalNote = null,
                 direction = Direction.SPEND.name,
                 energyValue = 10,
-                primaryDimensionId = dim.id,
+                dimensionId = dim.id,
                 createdAtEpochMillis = 100L
-            ),
-            emptyList()
+            )
         )
 
         assertFalse(CheckInReminderReceiver.shouldPostNotification(db.dao(), today, TimeSlot.EVENING))

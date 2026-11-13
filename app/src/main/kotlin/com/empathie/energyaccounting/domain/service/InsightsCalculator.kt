@@ -13,9 +13,8 @@ import kotlin.math.roundToInt
 /**
  * Pure math behind the Insights tab.
  *
- * Only each entry's primary dimension receives its energy value, so the dimension
- * breakdown always adds up to the period's gain and spend. Secondary dimensions are
- * counted as occurrences for context and filtering, never as extra energy.
+ * Each entry attributes its full energy value to its single dimension, so the dimension
+ * breakdown always adds up to the period's gain and spend.
  */
 object InsightsCalculator {
 
@@ -34,22 +33,19 @@ object InsightsCalculator {
         val averageDailyNet = if (activeDaysCount == 0) 0 else netBalance / activeDaysCount
 
         val byDimension = allDimensions.map { dimension ->
-            val primarySpend = inRange
-                .filter { it.primaryDimension.id == dimension.id && it.direction == Direction.SPEND }
+            val spend = inRange
+                .filter { it.dimension.id == dimension.id && it.direction == Direction.SPEND }
                 .sumOf { it.energyValue }
-            val primaryGain = inRange
-                .filter { it.primaryDimension.id == dimension.id && it.direction == Direction.GAIN }
+            val gain = inRange
+                .filter { it.dimension.id == dimension.id && it.direction == Direction.GAIN }
                 .sumOf { it.energyValue }
 
             DimensionImpactSummary(
                 dimension = dimension,
-                primarySpend = primarySpend,
-                primarySpendSharePercent = sharePercent(primarySpend, totalSpend),
-                primaryGain = primaryGain,
-                primaryGainSharePercent = sharePercent(primaryGain, totalGain),
-                secondaryOccurrenceCount = inRange.count { entry ->
-                    entry.secondaryDimensions.any { it.id == dimension.id }
-                },
+                spend = spend,
+                spendSharePercent = sharePercent(spend, totalSpend),
+                gain = gain,
+                gainSharePercent = sharePercent(gain, totalGain),
             )
         }
 
@@ -57,11 +53,14 @@ object InsightsCalculator {
             val slotEntries = inRange.filter { it.timeSlot == timeSlot }
             val gain = slotEntries.filter { it.direction == Direction.GAIN }.sumOf { it.energyValue }
             val spend = slotEntries.filter { it.direction == Direction.SPEND }.sumOf { it.energyValue }
+            val slotNet = gain - spend
+            val slotActiveDays = slotEntries.map { it.date }.distinct().size
             TimeSlotImpactSummary(
                 timeSlot = timeSlot,
                 totalGain = gain,
                 totalSpend = spend,
-                netBalance = gain - spend,
+                netBalance = slotNet,
+                averageNetPerActiveDay = if (slotActiveDays == 0) 0 else slotNet / slotActiveDays,
             )
         }
 

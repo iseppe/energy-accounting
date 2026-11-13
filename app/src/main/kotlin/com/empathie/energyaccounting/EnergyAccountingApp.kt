@@ -1,6 +1,7 @@
 package com.empathie.energyaccounting
 
 import android.app.Application
+import com.empathie.energyaccounting.data.diagnostics.AppLogger
 import com.empathie.energyaccounting.data.local.DatabaseProvider
 import com.empathie.energyaccounting.data.local.EnergyAccountingDatabase
 import com.empathie.energyaccounting.data.repository.EnergyAccountingRepository
@@ -43,10 +44,15 @@ class EnergyAccountingApp : Application() {
         CheckInReminderReceiver.ensureNotificationChannel(this)
 
         applicationScope.launch {
-            database.ensureSeeded()
-            val scheduler = ReminderScheduler(this@EnergyAccountingApp)
-            repository.getReminders().forEach { reminder ->
-                scheduler.scheduleOrCancel(reminder)
+            runCatching {
+                database.ensureSeeded()
+                val scheduler = ReminderScheduler(this@EnergyAccountingApp)
+                repository.getReminders().forEach { reminder ->
+                    scheduler.scheduleOrCancel(reminder)
+                }
+                AppLogger.info("App", "Startup complete: database seeded, reminders re-armed")
+            }.onFailure { error ->
+                AppLogger.error("App", "Startup failed", error)
             }
         }
     }

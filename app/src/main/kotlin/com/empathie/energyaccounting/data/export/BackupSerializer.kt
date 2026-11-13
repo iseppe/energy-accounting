@@ -13,14 +13,18 @@ import com.empathie.energyaccounting.domain.model.SystemDimensionKey
 import com.empathie.energyaccounting.domain.model.TimeSlot
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.time.LocalDate
 import java.util.Locale
 
 /**
  * Versioned JSON backup of every local table, plus the restore engine.
  *
- * Dimension ids are only meaningful inside one database, so both modes build an old-id
- * to new-id map first and rewrite every entry and template reference through it.
+ * Exports `schemaVersion = 2` (single dimension). Restore accepts both v1 backups
+ * (`primaryDimensionId`, `defaultPrimaryDimensionId`, secondary dimension lists) and v2
+ * backups, remapping every dimension reference onto the local database.
  */
 class BackupSerializer(private val db: EnergyAccountingDatabase) {
 
@@ -48,8 +52,7 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
                     displayName = it.displayName,
                     defaultDirection = it.defaultDirection,
                     defaultEnergyValue = it.defaultEnergyValue,
-                    defaultPrimaryDimensionId = it.defaultPrimaryDimensionId,
-                    defaultSecondaryDimensionIds = decodeIds(it.defaultSecondaryDimensionIdsCsv),
+                    defaultDimensionId = it.defaultDimensionId,
                     isPinned = it.isPinned,
                     usageCount = it.usageCount,
                     lastUsedEpochMillis = it.lastUsedEpochMillis,
@@ -63,8 +66,7 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
                     situationalNote = it.entry.situationalNote,
                     direction = it.entry.direction,
                     energyValue = it.entry.energyValue,
-                    primaryDimensionId = it.entry.primaryDimensionId,
-                    secondaryDimensionIds = it.secondaryDimensions.map { dimension -> dimension.id },
+                    dimensionId = it.entry.dimensionId,
                     createdAtEpochMillis = it.entry.createdAtEpochMillis,
                 )
             },
@@ -81,10 +83,7 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
     }
 
     suspend fun restoreJson(jsonString: String, mode: RestoreMode): List<CheckInReminder> {
-        val payload = json.decodeFromString(BackupPayload.serializer(), jsonString)
-        require(payload.schemaVersion == CURRENT_SCHEMA_VERSION) {
-            "Unsupported backup schema version ${payload.schemaVersion}, expected $CURRENT_SCHEMA_VERSION"
-        }
+        val payload = decodePayload(jsonString)
         validate(payload)
 
         return db.withTransaction {
@@ -99,6 +98,17 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
             insertTemplates(payload.templates, idMap)
             insertEntries(payload.entries, idMap, deduplicate = mode == RestoreMode.MERGE)
             applyReminders(payload.reminders)
+        }
+    }
+
+    private fun decodePayload(jsonString: String): BackupPayload {
+        val root = json.parseToJsonElement(jsonString).jsonObject
+        val version = root["schemaVersion"]?.jsonPrimitive?.intOrNull ?: 1
+
+        return when (version) {
+            1 -> json.decodeFromString(V1BackupPayload.serializer(), jsonString).toCurrent()
+            2 -> json.decodeFromString(BackupPayload.serializer(), jsonString)
+            else -> throw IllegalArgumentException("Unsupported backup schema version $version")
         }
     }
 
@@ -204,11 +214,7 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
         records.forEach { record ->
             val normalized = record.normalizedName.trim().lowercase(Locale.ROOT)
             if (normalized in localNames) return@forEach
-            val primaryId = idMap[record.defaultPrimaryDimensionId] ?: return@forEach
-            val secondaryIds = record.defaultSecondaryDimensionIds
-                .mapNotNull { idMap[it] }
-                .filter { it != primaryId }
-                .distinct()
+            val dimensionId = idMap[record.defaultDimensionId] ?: return@forEach
 
             dao.insertTemplate(
                 ActivityTemplateEntity(
@@ -216,8 +222,7 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
                     displayName = record.displayName,
                     defaultDirection = record.defaultDirection,
                     defaultEnergyValue = record.defaultEnergyValue,
-                    defaultPrimaryDimensionId = primaryId,
-                    defaultSecondaryDimensionIdsCsv = secondaryIds.joinToString(","),
+                    defaultDimensionId = dimensionId,
                     isPinned = record.isPinned,
                     usageCount = record.usageCount,
                     lastUsedEpochMillis = record.lastUsedEpochMillis,
@@ -239,11 +244,7 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
         }
 
         records.forEach { record ->
-            val primaryId = idMap[record.primaryDimensionId] ?: return@forEach
-            val secondaryIds = record.secondaryDimensionIds
-                .mapNotNull { idMap[it] }
-                .filter { it != primaryId }
-                .distinct()
+            val dimensionId = idMap[record.dimensionId] ?: return@forEach
 
             val entity = EntryEntity(
                 dateIso = record.dateIso,
@@ -252,13 +253,13 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
                 situationalNote = record.situationalNote,
                 direction = record.direction,
                 energyValue = record.energyValue,
-                primaryDimensionId = primaryId,
+                dimensionId = dimensionId,
                 createdAtEpochMillis = record.createdAtEpochMillis,
             )
 
             if (deduplicate && !existingKeys.add(entity.naturalKey())) return@forEach
 
-            dao.insertEntryWithSecondaries(entity, secondaryIds)
+            dao.insertEntry(entity)
         }
     }
 
@@ -289,9 +290,6 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
         return applied
     }
 
-    private fun decodeIds(csv: String): List<Long> =
-        csv.split(',').mapNotNull { it.trim().toLongOrNull() }
-
     private fun EntryEntity.naturalKey(): String = listOf(
         dateIso,
         timeSlot,
@@ -299,12 +297,12 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
         situationalNote.orEmpty(),
         direction,
         energyValue.toString(),
-        primaryDimensionId.toString(),
+        dimensionId.toString(),
         createdAtEpochMillis.toString(),
     ).joinToString("|")
 
     companion object {
-        const val CURRENT_SCHEMA_VERSION = 1
+        const val CURRENT_SCHEMA_VERSION = 2
     }
 }
 
@@ -332,8 +330,7 @@ data class TemplateRecord(
     val displayName: String,
     val defaultDirection: String,
     val defaultEnergyValue: Int,
-    val defaultPrimaryDimensionId: Long,
-    val defaultSecondaryDimensionIds: List<Long> = emptyList(),
+    val defaultDimensionId: Long,
     val isPinned: Boolean = false,
     val usageCount: Int = 0,
     val lastUsedEpochMillis: Long = 0L,
@@ -347,8 +344,7 @@ data class EntryRecord(
     val situationalNote: String? = null,
     val direction: String,
     val energyValue: Int,
-    val primaryDimensionId: Long,
-    val secondaryDimensionIds: List<Long> = emptyList(),
+    val dimensionId: Long,
     val createdAtEpochMillis: Long,
 )
 
@@ -359,3 +355,69 @@ data class ReminderRecord(
     val minute: Int,
     val isEnabled: Boolean,
 )
+
+// ---- schemaVersion 1 compatibility ------------------------------------------
+
+@Serializable
+data class V1BackupPayload(
+    val schemaVersion: Int = 1,
+    val dimensions: List<DimensionRecord> = emptyList(),
+    val templates: List<V1TemplateRecord> = emptyList(),
+    val entries: List<V1EntryRecord> = emptyList(),
+    val reminders: List<ReminderRecord> = emptyList(),
+) {
+    fun toCurrent(): BackupPayload = BackupPayload(
+        dimensions = dimensions,
+        templates = templates.map { it.toCurrent() },
+        entries = entries.map { it.toCurrent() },
+        reminders = reminders,
+    )
+}
+
+@Serializable
+data class V1TemplateRecord(
+    val normalizedName: String,
+    val displayName: String,
+    val defaultDirection: String,
+    val defaultEnergyValue: Int,
+    val defaultPrimaryDimensionId: Long,
+    val defaultSecondaryDimensionIds: List<Long> = emptyList(),
+    val isPinned: Boolean = false,
+    val usageCount: Int = 0,
+    val lastUsedEpochMillis: Long = 0L,
+) {
+    fun toCurrent(): TemplateRecord = TemplateRecord(
+        normalizedName = normalizedName,
+        displayName = displayName,
+        defaultDirection = defaultDirection,
+        defaultEnergyValue = defaultEnergyValue,
+        defaultDimensionId = defaultPrimaryDimensionId,
+        isPinned = isPinned,
+        usageCount = usageCount,
+        lastUsedEpochMillis = lastUsedEpochMillis,
+    )
+}
+
+@Serializable
+data class V1EntryRecord(
+    val dateIso: String,
+    val timeSlot: String,
+    val activity: String,
+    val situationalNote: String? = null,
+    val direction: String,
+    val energyValue: Int,
+    val primaryDimensionId: Long,
+    val secondaryDimensionIds: List<Long> = emptyList(),
+    val createdAtEpochMillis: Long,
+) {
+    fun toCurrent(): EntryRecord = EntryRecord(
+        dateIso = dateIso,
+        timeSlot = timeSlot,
+        activity = activity,
+        situationalNote = situationalNote,
+        direction = direction,
+        energyValue = energyValue,
+        dimensionId = primaryDimensionId,
+        createdAtEpochMillis = createdAtEpochMillis,
+    )
+}

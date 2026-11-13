@@ -27,4 +27,14 @@ object EnergyFormatter {
         net < 0 -> net.toString()
         else -> "0"
     }
+
+    /**
+     * Formats a day total's gain without the misleading `+0` on an empty day.
+     */
+    fun formatGainTotal(gain: Int): String = if (gain == 0) "0" else "+$gain"
+
+    /**
+     * Formats a day total's spend without the misleading `-0` on an empty day.
+     */
+    fun formatSpendTotal(spend: Int): String = if (spend == 0) "0" else "-$spend"
 }

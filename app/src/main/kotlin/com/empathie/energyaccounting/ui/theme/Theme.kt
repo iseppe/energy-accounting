@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.Color
 enum class ThemeMode {
     SYSTEM,
     DARK,
-    WARM_LIGHT,
+    LIGHT,
 }
 
 /**
@@ -97,7 +97,7 @@ fun EmpathieTheme(
     val isDark = when (themeMode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.DARK -> true
-        ThemeMode.WARM_LIGHT -> false
+        ThemeMode.LIGHT -> false
     }
 
     val empathieColors = if (isDark) {

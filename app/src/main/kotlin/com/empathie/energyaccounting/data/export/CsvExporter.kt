@@ -1,5 +1,6 @@
 package com.empathie.energyaccounting.data.export
 
+import com.empathie.energyaccounting.domain.model.EnergyDimension
 import com.empathie.energyaccounting.domain.model.Entry
 import com.empathie.energyaccounting.domain.service.EnergyFormatter
 
@@ -18,11 +19,13 @@ object CsvExporter {
         "Situational Note",
         "Direction",
         "Signed Value",
-        "Primary Dimension",
-        "Secondary Dimensions",
+        "Dimension",
     )
 
-    fun exportEntries(entries: List<Entry>): String = buildString {
+    fun exportEntries(
+        entries: List<Entry>,
+        dimensionLabel: (EnergyDimension) -> String = { it.name },
+    ): String = buildString {
         appendLine(HEADER.joinToString(","))
         entries
             .sortedWith(compareBy({ it.date }, { it.timeSlot.ordinal }, { it.createdAtEpochMillis }))
@@ -35,8 +38,7 @@ object CsvExporter {
                         entry.situationalNote.orEmpty(),
                         entry.direction.name,
                         EnergyFormatter.formatSignedValue(entry.direction, entry.energyValue),
-                        entry.primaryDimension.name,
-                        entry.secondaryDimensions.joinToString(" / ") { it.name },
+                        dimensionLabel(entry.dimension),
                     ).joinToString(",") { escape(it) }
                 )
             }

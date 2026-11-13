@@ -3,11 +3,13 @@ package com.empathie.energyaccounting.ui
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.empathie.energyaccounting.data.diagnostics.DebugLogExporter
 import com.empathie.energyaccounting.data.export.BackupSerializer
 import com.empathie.energyaccounting.data.export.PractitionerPdfGenerator
 import com.empathie.energyaccounting.data.export.RestoreMode
 import com.empathie.energyaccounting.data.local.EnergyAccountingDatabase
 import com.empathie.energyaccounting.data.repository.EnergyAccountingRepository
+import com.empathie.energyaccounting.data.settings.AppLanguage
 import com.empathie.energyaccounting.data.settings.AppSettings
 import com.empathie.energyaccounting.domain.model.ActivityTemplate
 import com.empathie.energyaccounting.domain.model.CheckInReminder
@@ -16,6 +18,8 @@ import com.empathie.energyaccounting.domain.model.Entry
 import com.empathie.energyaccounting.domain.model.SystemDimensionKey
 import com.empathie.energyaccounting.domain.model.TimeSlot
 import com.empathie.energyaccounting.reminder.ReminderScheduler
+import com.empathie.energyaccounting.ui.insights.InsightsPeriod
+import com.empathie.energyaccounting.ui.insights.InsightsViewModel
 import com.empathie.energyaccounting.ui.manage.ManageExportViewModel
 import com.empathie.energyaccounting.ui.manage.ManageMessage
 import kotlinx.coroutines.flow.first
@@ -28,7 +32,10 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZonedDateTime
 
 @RunWith(RobolectricTestRunner::class)
@@ -75,6 +82,7 @@ class ManageExportViewModelTest {
             pdfGenerator = PractitionerPdfGenerator(),
             reminderScheduler = scheduler,
             settings = AppSettings(context),
+            debugLogExporter = DebugLogExporter(db2),
         )
 
     @Test
@@ -91,7 +99,7 @@ class ManageExportViewModelTest {
                 situationalNote = null,
                 direction = Direction.SPEND,
                 energyValue = 30,
-                primaryDimension = cognitive,
+                dimension = cognitive,
                 createdAtEpochMillis = 1000L,
             )
         )
@@ -102,12 +110,41 @@ class ManageExportViewModelTest {
                 activityName = "  MORNING ROUTINE ",
                 defaultDirection = Direction.GAIN,
                 defaultEnergyValue = 10,
-                defaultPrimaryDimension = cognitive,
+                defaultDimension = cognitive,
             )
         )
 
         assertEquals(ManageMessage.TEMPLATE_NAME_IN_USE, viewModel.message.value)
         assertEquals(1, repo.observeTemplates().first().size)
+    }
+
+    @Test
+    fun `adding a duplicate custom dimension reports DIMENSION_NAME_IN_USE instead of crashing`() = runTest {
+        val viewModel = viewModel(EnergyAccountingRepository(db1))
+
+        viewModel.addCustomDimension("Physical")
+
+        assertEquals(ManageMessage.DIMENSION_NAME_IN_USE, viewModel.message.value)
+    }
+
+    @Test
+    fun `setAppLanguage persists the language preference`() = runTest {
+        val viewModel = viewModel(EnergyAccountingRepository(db1))
+
+        viewModel.setAppLanguage(AppLanguage.ITALIAN)
+
+        assertEquals(AppLanguage.ITALIAN, viewModel.appLanguage.value)
+        assertEquals(AppLanguage.ITALIAN, AppSettings(context).appLanguage())
+    }
+
+    @Test
+    fun `InsightsViewModel defaults to TODAY`() = runTest {
+        val fixedClock = Clock.fixed(Instant.parse("2026-11-13T10:00:00Z"), ZoneId.of("UTC"))
+        val viewModel = InsightsViewModel(EnergyAccountingRepository(db1), fixedClock)
+
+        assertEquals(InsightsPeriod.TODAY, viewModel.state.value.period)
+        assertEquals(LocalDate.of(2026, 11, 13), viewModel.state.value.startDate)
+        assertEquals(LocalDate.of(2026, 11, 13), viewModel.state.value.endDate)
     }
 
     @Test

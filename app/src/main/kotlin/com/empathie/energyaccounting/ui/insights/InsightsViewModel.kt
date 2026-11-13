@@ -3,7 +3,6 @@ package com.empathie.energyaccounting.ui.insights
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.empathie.energyaccounting.data.repository.EnergyAccountingRepository
-import com.empathie.energyaccounting.domain.model.EnergyDimension
 import com.empathie.energyaccounting.domain.model.Entry
 import com.empathie.energyaccounting.domain.model.PeriodInsights
 import com.empathie.energyaccounting.domain.service.InsightsCalculator
@@ -21,6 +20,7 @@ import java.time.Clock
 import java.time.LocalDate
 
 enum class InsightsPeriod {
+    TODAY,
     LAST_7_DAYS,
     LAST_30_DAYS,
     CUSTOM,
@@ -36,8 +36,9 @@ data class InsightsUiState(
 /**
  * Period selection and dimension filtering for the Insights tab.
  *
- * A selected dimension matches entries where it is either the 1° primary or one of the
- * 2° secondaries, which is how a user checks "what did sensory load look like?".
+ * A selected dimension matches entries attributed to it, which is how a user checks
+ * "what did sensory load look like?". `today` is recomputed on every use so a session
+ * open past midnight starts its `Today` range correctly.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class InsightsViewModel(
@@ -50,8 +51,8 @@ class InsightsViewModel(
 
     private val _state = MutableStateFlow(
         InsightsUiState(
-            period = InsightsPeriod.LAST_7_DAYS,
-            startDate = today.minusDays(6),
+            period = InsightsPeriod.TODAY,
+            startDate = today,
             endDate = today,
         )
     )
@@ -64,20 +65,15 @@ class InsightsViewModel(
         .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5_000),
-            InsightsCalculator.calculate(today.minusDays(6), today, emptyList(), emptyList()),
+            InsightsCalculator.calculate(today, today, emptyList(), emptyList()),
         )
-
-    val dimensions: StateFlow<List<EnergyDimension>> = repo.observeActiveDimensions()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val filteredEntries: StateFlow<List<Entry>> = _state
         .flatMapLatest { current ->
             repo.observeEntries(current.startDate, current.endDate).map { entries ->
                 val dimensionId = current.selectedDimensionId ?: return@map emptyList()
-                entries.filter { entry ->
-                    entry.primaryDimension.id == dimensionId ||
-                        entry.secondaryDimensions.any { it.id == dimensionId }
-                }.sortedWith(compareBy({ it.date }, { it.timeSlot.ordinal }, { it.createdAtEpochMillis }))
+                entries.filter { entry -> entry.dimension.id == dimensionId }
+                    .sortedWith(compareBy({ it.date }, { it.timeSlot.ordinal }, { it.createdAtEpochMillis }))
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -85,6 +81,9 @@ class InsightsViewModel(
     fun selectPeriod(period: InsightsPeriod) {
         _state.update { current ->
             when (period) {
+                InsightsPeriod.TODAY ->
+                    current.copy(period = period, startDate = today, endDate = today)
+
                 InsightsPeriod.LAST_7_DAYS ->
                     current.copy(period = period, startDate = today.minusDays(6), endDate = today)
 

@@ -22,23 +22,23 @@ class InsightsCalculatorTest {
     private val end = LocalDate.of(2026, 11, 30)
 
     @Test
-    fun `primary dimension carries the full energy value while secondary only counts occurrences`() {
+    fun `dimension breakdown attributes full energyValue to each entry dimension and computes slot averages`() {
         val entries = listOf(
             Entry(
                 1L, LocalDate.of(2026, 11, 5), TimeSlot.AFTERNOON, "Team meeting",
-                "Loud room", Direction.SPEND, 60, sensory, listOf(social), 1L
+                "Loud room", Direction.SPEND, 60, sensory, 1L
             ),
             Entry(
                 2L, LocalDate.of(2026, 11, 5), TimeSlot.EVENING, "Quiet time",
-                null, Direction.GAIN, 20, sensory, emptyList(), 2L
+                null, Direction.GAIN, 20, sensory, 2L
             ),
             Entry(
-                3L, LocalDate.of(2026, 11, 6), TimeSlot.LATE_MORNING, "Homework",
-                null, Direction.SPEND, 40, cognitive, listOf(sensory, social), 3L
+                3L, LocalDate.of(2026, 11, 6), TimeSlot.AFTERNOON, "Homework",
+                null, Direction.SPEND, 40, cognitive, 3L
             ),
             Entry(
                 4L, LocalDate.of(2026, 12, 1), TimeSlot.EARLY_MORNING, "Out of range",
-                null, Direction.SPEND, 90, physical, emptyList(), 4L
+                null, Direction.SPEND, 90, physical, 4L
             ),
         )
 
@@ -51,36 +51,37 @@ class InsightsCalculatorTest {
         assertEquals(-40, insights.averageDailyNet)
 
         val sensorySummary = insights.byDimension.first { it.dimension.id == sensory.id }
-        assertEquals(60, sensorySummary.primarySpend)
-        assertEquals(60, sensorySummary.primarySpendSharePercent)
-        assertEquals(20, sensorySummary.primaryGain)
-        assertEquals(100, sensorySummary.primaryGainSharePercent)
-        assertEquals(1, sensorySummary.secondaryOccurrenceCount)
+        assertEquals(60, sensorySummary.spend)
+        assertEquals(60, sensorySummary.spendSharePercent)
+        assertEquals(20, sensorySummary.gain)
+        assertEquals(100, sensorySummary.gainSharePercent)
 
         val cognitiveSummary = insights.byDimension.first { it.dimension.id == cognitive.id }
-        assertEquals(40, cognitiveSummary.primarySpend)
-        assertEquals(40, cognitiveSummary.primarySpendSharePercent)
-        assertEquals(0, cognitiveSummary.primaryGain)
-        assertEquals(0, cognitiveSummary.primaryGainSharePercent)
-        assertEquals(0, cognitiveSummary.secondaryOccurrenceCount)
+        assertEquals(40, cognitiveSummary.spend)
+        assertEquals(40, cognitiveSummary.spendSharePercent)
+        assertEquals(0, cognitiveSummary.gain)
+        assertEquals(0, cognitiveSummary.gainSharePercent)
 
         val socialSummary = insights.byDimension.first { it.dimension.id == social.id }
-        assertEquals(0, socialSummary.primarySpend)
-        assertEquals(0, socialSummary.primaryGain)
-        assertEquals(2, socialSummary.secondaryOccurrenceCount)
+        assertEquals(0, socialSummary.spend)
+        assertEquals(0, socialSummary.gain)
 
         val physicalSummary = insights.byDimension.first { it.dimension.id == physical.id }
-        assertEquals(0, physicalSummary.primarySpend)
-        assertEquals(0, physicalSummary.secondaryOccurrenceCount)
+        assertEquals(0, physicalSummary.spend)
+        assertEquals(0, physicalSummary.gain)
+
+        val afternoon = insights.byTimeSlot.first { it.timeSlot == TimeSlot.AFTERNOON }
+        assertEquals(-100, afternoon.netBalance)
+        assertEquals(-50, afternoon.averageNetPerActiveDay)
     }
 
     @Test
     fun `time slot breakdown sums back to the period totals`() {
         val entries = listOf(
-            Entry(1L, LocalDate.of(2026, 11, 5), TimeSlot.EARLY_MORNING, "Routine", null, Direction.SPEND, 30, cognitive, emptyList(), 1L),
-            Entry(2L, LocalDate.of(2026, 11, 5), TimeSlot.AFTERNOON, "Walk", null, Direction.GAIN, 40, physical, emptyList(), 2L),
-            Entry(3L, LocalDate.of(2026, 11, 6), TimeSlot.AFTERNOON, "Meeting", null, Direction.SPEND, 50, sensory, emptyList(), 3L),
-            Entry(4L, LocalDate.of(2026, 11, 6), TimeSlot.EVENING, "Music", null, Direction.GAIN, 10, emotional, emptyList(), 4L),
+            Entry(1L, LocalDate.of(2026, 11, 5), TimeSlot.EARLY_MORNING, "Routine", null, Direction.SPEND, 30, cognitive, 1L),
+            Entry(2L, LocalDate.of(2026, 11, 5), TimeSlot.AFTERNOON, "Walk", null, Direction.GAIN, 40, physical, 2L),
+            Entry(3L, LocalDate.of(2026, 11, 6), TimeSlot.AFTERNOON, "Meeting", null, Direction.SPEND, 50, sensory, 3L),
+            Entry(4L, LocalDate.of(2026, 11, 6), TimeSlot.EVENING, "Music", null, Direction.GAIN, 10, emotional, 4L),
         )
 
         val insights = InsightsCalculator.calculate(start, end, entries, dimensions)
@@ -94,6 +95,7 @@ class InsightsCalculatorTest {
         assertEquals(40, afternoon.totalGain)
         assertEquals(50, afternoon.totalSpend)
         assertEquals(-10, afternoon.netBalance)
+        assertEquals(-5, afternoon.averageNetPerActiveDay)
     }
 
     @Test
@@ -105,7 +107,8 @@ class InsightsCalculatorTest {
         assertEquals(0, insights.netBalance)
         assertEquals(0, insights.activeDaysCount)
         assertEquals(0, insights.averageDailyNet)
-        assertTrue(insights.byDimension.all { it.primarySpendSharePercent == 0 })
-        assertTrue(insights.byDimension.all { it.primaryGainSharePercent == 0 })
+        assertTrue(insights.byDimension.all { it.spendSharePercent == 0 })
+        assertTrue(insights.byDimension.all { it.gainSharePercent == 0 })
+        assertTrue(insights.byTimeSlot.all { it.averageNetPerActiveDay == 0 })
     }
 }

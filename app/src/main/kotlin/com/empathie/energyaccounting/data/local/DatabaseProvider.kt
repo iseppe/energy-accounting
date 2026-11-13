@@ -21,7 +21,10 @@ object DatabaseProvider {
                 context.applicationContext,
                 EnergyAccountingDatabase::class.java,
                 DATABASE_NAME,
-            ).build().also { instance = it }
+            )
+                .addMigrations(EnergyAccountingDatabase.MIGRATION_1_2)
+                .build()
+                .also { instance = it }
         }
 
     /**

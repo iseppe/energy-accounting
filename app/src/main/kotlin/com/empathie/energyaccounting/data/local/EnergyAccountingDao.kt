@@ -9,7 +9,6 @@ import androidx.room.Update
 import com.empathie.energyaccounting.data.local.entity.ActivityTemplateEntity
 import com.empathie.energyaccounting.data.local.entity.EnergyDimensionEntity
 import com.empathie.energyaccounting.data.local.entity.EntryEntity
-import com.empathie.energyaccounting.data.local.entity.EntrySecondaryDimensionCrossRef
 import com.empathie.energyaccounting.data.local.entity.EntryWithDimensions
 import com.empathie.energyaccounting.data.local.entity.ReminderScheduleEntity
 import kotlinx.coroutines.flow.Flow
@@ -52,13 +51,8 @@ abstract class EnergyAccountingDao {
     @Query("DELETE FROM energy_dimensions WHERE id = :dimensionId AND systemKey IS NULL")
     abstract suspend fun deleteCustomDimension(dimensionId: Long): Int
 
-    @Query("SELECT COUNT(*) FROM entries WHERE primaryDimensionId = :dimensionId")
-    abstract suspend fun countEntriesWithPrimaryDimension(dimensionId: Long): Int
-
-    @Query(
-        "SELECT COUNT(*) FROM entry_secondary_dimensions WHERE dimensionId = :dimensionId"
-    )
-    abstract suspend fun countEntriesWithSecondaryDimension(dimensionId: Long): Int
+    @Query("SELECT COUNT(*) FROM entries WHERE dimensionId = :dimensionId")
+    abstract suspend fun countEntriesWithDimension(dimensionId: Long): Int
 
     // ---- Entries ----------------------------------------------------------
 
@@ -100,37 +94,6 @@ abstract class EnergyAccountingDao {
 
     @Query("DELETE FROM entries WHERE id = :entryId")
     abstract suspend fun deleteEntryById(entryId: Long)
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    abstract suspend fun insertSecondaryDimensionRefs(refs: List<EntrySecondaryDimensionCrossRef>)
-
-    @Query("DELETE FROM entry_secondary_dimensions WHERE entryId = :entryId")
-    abstract suspend fun deleteSecondaryDimensionRefs(entryId: Long)
-
-    @Transaction
-    open suspend fun insertEntryWithSecondaries(
-        entry: EntryEntity,
-        secondaryDimensionIds: List<Long>,
-    ): Long {
-        val entryId = insertEntry(entry)
-        replaceSecondaryDimensionRefs(entryId, secondaryDimensionIds)
-        return entryId
-    }
-
-    @Transaction
-    open suspend fun updateEntryWithSecondaries(
-        entry: EntryEntity,
-        secondaryDimensionIds: List<Long>,
-    ) {
-        updateEntry(entry)
-        replaceSecondaryDimensionRefs(entry.id, secondaryDimensionIds)
-    }
-
-    private suspend fun replaceSecondaryDimensionRefs(entryId: Long, dimensionIds: List<Long>) {
-        deleteSecondaryDimensionRefs(entryId)
-        val refs = dimensionIds.distinct().map { EntrySecondaryDimensionCrossRef(entryId, it) }
-        if (refs.isNotEmpty()) insertSecondaryDimensionRefs(refs)
-    }
 
     // ---- Activity templates ----------------------------------------------
 

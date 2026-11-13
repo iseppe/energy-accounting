@@ -5,8 +5,8 @@ import java.time.LocalDate
 /**
  * A single atomic energy record logged within a [TimeSlot] on a [DailyAccount].
  *
- * [activity] is trimmed, [situationalNote] is trimmed to `null` when blank, and
- * [secondaryDimensions] never contains the [primaryDimension] (nor duplicates).
+ * [activity] is trimmed, [situationalNote] is trimmed to `null` when blank, and the
+ * whole [energyValue] is attributed to the single [dimension].
  *
  * Written as a regular class (not a data class) because normalization must happen
  * inside the constructor, which a data class's `val`-only primary constructor forbids.
@@ -19,8 +19,7 @@ class Entry(
     situationalNote: String?,
     val direction: Direction,
     val energyValue: Int,
-    val primaryDimension: EnergyDimension,
-    secondaryDimensions: List<EnergyDimension> = emptyList(),
+    val dimension: EnergyDimension,
     val createdAtEpochMillis: Long,
 ) {
     init {
@@ -33,9 +32,6 @@ class Entry(
 
     val activity: String = activity.trim()
     val situationalNote: String? = situationalNote?.trim()?.takeIf(String::isNotEmpty)
-    val secondaryDimensions: List<EnergyDimension> = secondaryDimensions
-        .filterNot { it.id == primaryDimension.id }
-        .distinctBy { it.id }
 
     fun copy(
         id: Long = this.id,
@@ -45,8 +41,7 @@ class Entry(
         situationalNote: String? = this.situationalNote,
         direction: Direction = this.direction,
         energyValue: Int = this.energyValue,
-        primaryDimension: EnergyDimension = this.primaryDimension,
-        secondaryDimensions: List<EnergyDimension> = this.secondaryDimensions,
+        dimension: EnergyDimension = this.dimension,
         createdAtEpochMillis: Long = this.createdAtEpochMillis,
     ): Entry = Entry(
         id = id,
@@ -56,8 +51,7 @@ class Entry(
         situationalNote = situationalNote,
         direction = direction,
         energyValue = energyValue,
-        primaryDimension = primaryDimension,
-        secondaryDimensions = secondaryDimensions,
+        dimension = dimension,
         createdAtEpochMillis = createdAtEpochMillis,
     )
 
@@ -71,8 +65,7 @@ class Entry(
             situationalNote == other.situationalNote &&
             direction == other.direction &&
             energyValue == other.energyValue &&
-            primaryDimension == other.primaryDimension &&
-            secondaryDimensions == other.secondaryDimensions &&
+            dimension == other.dimension &&
             createdAtEpochMillis == other.createdAtEpochMillis
     }
 
@@ -84,16 +77,14 @@ class Entry(
         situationalNote,
         direction,
         energyValue,
-        primaryDimension,
-        secondaryDimensions,
+        dimension,
         createdAtEpochMillis,
     ).hashCode()
 
     override fun toString(): String =
         "Entry(id=$id, date=$date, timeSlot=$timeSlot, activity='$activity', " +
             "situationalNote=$situationalNote, direction=$direction, energyValue=$energyValue, " +
-            "primaryDimension=$primaryDimension, secondaryDimensions=$secondaryDimensions, " +
-            "createdAtEpochMillis=$createdAtEpochMillis)"
+            "dimension=$dimension, createdAtEpochMillis=$createdAtEpochMillis)"
 
     companion object {
         const val MIN_ENERGY_VALUE = 1

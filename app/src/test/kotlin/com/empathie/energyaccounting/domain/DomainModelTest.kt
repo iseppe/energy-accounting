@@ -32,7 +32,7 @@ class DomainModelTest {
     }
 
     @Test
-    fun `Entry strips primaryDimension from secondaryDimensions and normalizes strings`() {
+    fun `Entry holds a single dimension and normalizes activity and situationalNote`() {
         val entry = Entry(
             date = LocalDate.of(2026, 11, 12),
             timeSlot = TimeSlot.LATE_MORNING,
@@ -40,13 +40,12 @@ class DomainModelTest {
             situationalNote = "   ",
             direction = Direction.SPEND,
             energyValue = 50,
-            primaryDimension = sensory,
-            secondaryDimensions = listOf(sensory, social, social),
+            dimension = sensory,
             createdAtEpochMillis = 1000L
         )
         assertEquals("Lunch in cafeteria", entry.activity)
         assertNull(entry.situationalNote)
-        assertEquals(listOf(social), entry.secondaryDimensions)
+        assertEquals(sensory, entry.dimension)
     }
 
     @Test(expected = IllegalArgumentException::class)
@@ -58,18 +57,31 @@ class DomainModelTest {
             situationalNote = null,
             direction = Direction.SPEND,
             energyValue = 0,
-            primaryDimension = sensory,
+            dimension = sensory,
             createdAtEpochMillis = 1000L
         )
+    }
+
+    @Test
+    fun `ActivityTemplate holds a single default dimension and normalizes its name`() {
+        val template = ActivityTemplate(
+            activityName = "  Morning routine  ",
+            defaultDirection = Direction.SPEND,
+            defaultEnergyValue = 30,
+            defaultDimension = cognitive,
+        )
+        assertEquals("Morning routine", template.activityName)
+        assertEquals("morning routine", template.normalizedName)
+        assertEquals(cognitive, template.defaultDimension)
     }
 
     @Test
     fun `DailyAccount aggregates zero-based gain, spend, and net balance per slot and day`() {
         val date = LocalDate.of(2026, 11, 12)
         val entries = listOf(
-            Entry(1L, date, TimeSlot.EARLY_MORNING, "Morning routine", null, Direction.SPEND, 30, cognitive, emptyList(), 10L),
-            Entry(2L, date, TimeSlot.EARLY_MORNING, "Favourite breakfast", null, Direction.GAIN, 10, sensory, emptyList(), 20L),
-            Entry(3L, date, TimeSlot.AFTERNOON, "Quiet room", null, Direction.GAIN, 50, sensory, listOf(social), 30L)
+            Entry(1L, date, TimeSlot.EARLY_MORNING, "Morning routine", null, Direction.SPEND, 30, cognitive, 10L),
+            Entry(2L, date, TimeSlot.EARLY_MORNING, "Favourite breakfast", null, Direction.GAIN, 10, sensory, 20L),
+            Entry(3L, date, TimeSlot.AFTERNOON, "Quiet room", null, Direction.GAIN, 50, sensory, 30L)
         )
         val account = DailyAccount.fromEntries(date, entries)
         assertEquals(60, account.totalGain)
@@ -78,27 +90,14 @@ class DomainModelTest {
         assertEquals(-20, account.slots.getValue(TimeSlot.EARLY_MORNING).netBalance)
         assertEquals(0, account.slots.getValue(TimeSlot.LATE_MORNING).netBalance)
         assertEquals(50, account.slots.getValue(TimeSlot.AFTERNOON).netBalance)
+        assertEquals(sensory, account.slots.getValue(TimeSlot.AFTERNOON).entries.first().dimension)
     }
 
     @Test
-    fun `DimensionChoiceState promotes first tap to primary and subsequent taps to secondary`() {
-        val s0 = DimensionChoiceState(primaryId = null)
-        val s1 = s0.onTap(1L)
-        assertEquals(1L, s1.primaryId)
-        assertTrue(s1.secondaryIds.isEmpty())
-
-        val s2 = s1.onTap(2L).onTap(3L)
-        assertEquals(1L, s2.primaryId)
-        assertEquals(setOf(2L, 3L), s2.secondaryIds)
-
-        // Tapping primary when secondaries exist promotes first secondary to primary
-        val s3 = s2.onTap(1L)
-        assertEquals(2L, s3.primaryId)
-        assertEquals(setOf(3L), s3.secondaryIds)
-
-        // Long-pressing a secondary swaps it into primary
-        val s4 = s3.onLongPress(3L)
-        assertEquals(3L, s4.primaryId)
-        assertEquals(setOf(2L), s4.secondaryIds)
+    fun `EnergyFormatter formats zero gain and spend without plus or minus signs`() {
+        assertEquals("0", EnergyFormatter.formatGainTotal(0))
+        assertEquals("+20", EnergyFormatter.formatGainTotal(20))
+        assertEquals("0", EnergyFormatter.formatSpendTotal(0))
+        assertEquals("-35", EnergyFormatter.formatSpendTotal(35))
     }
 }

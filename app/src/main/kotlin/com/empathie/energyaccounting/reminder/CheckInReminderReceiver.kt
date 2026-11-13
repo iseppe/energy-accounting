@@ -10,6 +10,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.empathie.energyaccounting.R
+import com.empathie.energyaccounting.data.diagnostics.AppLogger
 import com.empathie.energyaccounting.data.local.DatabaseProvider
 import com.empathie.energyaccounting.data.local.EnergyAccountingDao
 import com.empathie.energyaccounting.domain.model.CheckInReminder
@@ -24,7 +25,8 @@ import java.time.LocalDate
  * entries yet today, then re-arms the same alarm for the next day.
  *
  * Suppressing a satisfied slot is the whole anti-nag contract: a reminder never asks for
- * something already logged.
+ * something already logged. Re-arming runs even if posting the notification fails, so a
+ * single failed notification cannot silently kill the daily reminder.
  */
 class CheckInReminderReceiver : BroadcastReceiver() {
 
@@ -39,25 +41,38 @@ class CheckInReminderReceiver : BroadcastReceiver() {
                 val today = LocalDate.now()
 
                 if (shouldPostNotification(dao, today, timeSlot)) {
-                    postNotification(context, timeSlot)
+                    runCatching { postNotification(context, timeSlot) }
+                        .onFailure { AppLogger.error("Reminder", "notification failed", it) }
+                    AppLogger.info("Reminder", "Posted check-in notification for ${timeSlot.name}")
+                } else {
+                    AppLogger.info("Reminder", "Suppressed ${timeSlot.name}: entries already logged")
                 }
 
-                dao.getReminderSchedules()
-                    .firstOrNull { it.timeSlot == timeSlot.name }
-                    ?.let { schedule ->
-                        ReminderScheduler(context).scheduleOrCancel(
-                            CheckInReminder(
-                                timeSlot = timeSlot,
-                                hour = schedule.hour,
-                                minute = schedule.minute,
-                                isEnabled = schedule.isEnabled,
-                            )
-                        )
-                    }
+                runCatching { reschedule(context, dao, timeSlot) }
+                    .onFailure { AppLogger.error("Reminder", "reschedule failed", it) }
             } finally {
                 pendingResult.finish()
             }
         }
+    }
+
+    private suspend fun reschedule(
+        context: Context,
+        dao: EnergyAccountingDao,
+        timeSlot: TimeSlot,
+    ) {
+        dao.getReminderSchedules()
+            .firstOrNull { it.timeSlot == timeSlot.name }
+            ?.let { schedule ->
+                ReminderScheduler(context).scheduleOrCancel(
+                    CheckInReminder(
+                        timeSlot = timeSlot,
+                        hour = schedule.hour,
+                        minute = schedule.minute,
+                        isEnabled = schedule.isEnabled,
+                    )
+                )
+            }
     }
 
     companion object {
@@ -70,6 +85,18 @@ class CheckInReminderReceiver : BroadcastReceiver() {
             today: LocalDate,
             timeSlot: TimeSlot,
         ): Boolean = dao.countEntriesForSlot(today.toString(), timeSlot.name) == 0
+
+        /**
+         * Posts a live sample notification immediately, used by the Manage & Export
+         * "Send test notification" button. Returns false when the OS has notifications
+         * disabled for the app.
+         */
+        fun postTestNotification(context: Context, timeSlot: TimeSlot): Boolean {
+            ensureNotificationChannel(context)
+            if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return false
+            postNotification(context, timeSlot)
+            return true
+        }
 
         fun ensureNotificationChannel(context: Context) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -115,10 +142,8 @@ class CheckInReminderReceiver : BroadcastReceiver() {
                 .setOnlyAlertOnce(true)
                 .build()
 
-            if (NotificationManagerCompat.from(context).areNotificationsEnabled()) {
-                NotificationManagerCompat.from(context)
-                    .notify(NOTIFICATION_ID_BASE + timeSlot.ordinal, notification)
-            }
+            NotificationManagerCompat.from(context)
+                .notify(NOTIFICATION_ID_BASE + timeSlot.ordinal, notification)
         }
 
         private fun Context.slotLabel(timeSlot: TimeSlot): String = getString(

@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.empathie.energyaccounting.data.repository.EnergyAccountingRepository
 import com.empathie.energyaccounting.domain.model.ActivityTemplate
 import com.empathie.energyaccounting.domain.model.DailyAccount
-import com.empathie.energyaccounting.domain.model.DimensionChoiceState
 import com.empathie.energyaccounting.domain.model.Direction
 import com.empathie.energyaccounting.domain.model.EnergyDimension
 import com.empathie.energyaccounting.domain.model.Entry
@@ -15,7 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -36,7 +34,7 @@ data class EntryDraftState(
     val situationalNote: String = "",
     val direction: Direction = Direction.SPEND,
     val energyValue: Int = 30,
-    val dimensionChoice: DimensionChoiceState = DimensionChoiceState(null),
+    val selectedDimensionId: Long? = null,
     val matchedTemplate: ActivityTemplate? = null,
     val hasModifiedTemplateDefaults: Boolean = false,
     val updateTemplateDefaults: Boolean = false,
@@ -47,7 +45,8 @@ data class EntryDraftState(
  * net balances, and the draft of the entry sheet.
  *
  * The sheet's draft lives here (not in Compose state) so a configuration change cannot
- * lose a half-typed entry.
+ * lose a half-typed entry. `today` is recomputed on every read, so a session that stays
+ * open past midnight does not keep yesterday's clock.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class DailyAccountViewModel(
@@ -66,6 +65,9 @@ class DailyAccountViewModel(
 
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
+
+    private val _pendingFutureSlotWarning = MutableStateFlow<TimeSlot?>(null)
+    val pendingFutureSlotWarning: StateFlow<TimeSlot?> = _pendingFutureSlotWarning.asStateFlow()
 
     private val saveMutex = Mutex()
 
@@ -120,16 +122,33 @@ class DailyAccountViewModel(
         _calendarMonth.value = _calendarMonth.value.plusMonths(months)
     }
 
+    /**
+     * The UI entry point for `+`. A future date does not open the sheet directly: it
+     * asks for confirmation first, because logging ahead changes the day's meaning.
+     */
+    fun requestNewEntrySheet(preferredSlot: TimeSlot? = null) {
+        val timeSlot = resolveTimeSlot(preferredSlot)
+        if (_selectedDate.value.isAfter(today)) {
+            _pendingFutureSlotWarning.value = timeSlot
+        } else {
+            openNewEntrySheet(timeSlot)
+        }
+    }
+
+    fun confirmFutureEntryWarning() {
+        val timeSlot = _pendingFutureSlotWarning.value ?: return
+        _pendingFutureSlotWarning.value = null
+        openNewEntrySheet(timeSlot)
+    }
+
+    fun dismissFutureEntryWarning() {
+        _pendingFutureSlotWarning.value = null
+    }
+
     fun openNewEntrySheet(preferredSlot: TimeSlot? = null) {
         editingEntry = null
         _isCalendarOpen.value = false
-        val isToday = _selectedDate.value == today
-        val timeSlot = preferredSlot ?: if (isToday) {
-            TimeSlot.defaultForTime(LocalTime.now(clock))
-        } else {
-            TimeSlot.EARLY_MORNING
-        }
-        _draftState.value = EntryDraftState(timeSlot = timeSlot)
+        _draftState.value = EntryDraftState(timeSlot = resolveTimeSlot(preferredSlot))
     }
 
     fun openEditEntrySheet(entry: Entry) {
@@ -144,10 +163,7 @@ class DailyAccountViewModel(
             situationalNote = entry.situationalNote.orEmpty(),
             direction = entry.direction,
             energyValue = entry.energyValue,
-            dimensionChoice = DimensionChoiceState(
-                primaryId = entry.primaryDimension.id,
-                secondaryIds = entry.secondaryDimensions.map { it.id }.toSet(),
-            ),
+            selectedDimensionId = entry.dimension.id,
             matchedTemplate = template,
         )
     }
@@ -163,10 +179,7 @@ class DailyAccountViewModel(
                 activity = template.activityName,
                 direction = template.defaultDirection,
                 energyValue = template.defaultEnergyValue,
-                dimensionChoice = DimensionChoiceState(
-                    primaryId = template.defaultPrimaryDimension.id,
-                    secondaryIds = template.defaultSecondaryDimensions.map { it.id }.toSet(),
-                ),
+                selectedDimensionId = template.defaultDimension.id,
                 matchedTemplate = template,
                 hasModifiedTemplateDefaults = false,
                 updateTemplateDefaults = false,
@@ -199,17 +212,9 @@ class DailyAccountViewModel(
         }
     }
 
-    fun onTapDimension(dimensionId: Long) {
+    fun onSelectDimension(dimensionId: Long) {
         _draftState.update {
-            it?.copy(dimensionChoice = it.dimensionChoice.onTap(dimensionId))
-                ?.recomputeTemplateModification()
-        }
-    }
-
-    fun onLongPressDimension(dimensionId: Long) {
-        _draftState.update {
-            it?.copy(dimensionChoice = it.dimensionChoice.onLongPress(dimensionId))
-                ?.recomputeTemplateModification()
+            it?.copy(selectedDimensionId = dimensionId)?.recomputeTemplateModification()
         }
     }
 
@@ -220,8 +225,8 @@ class DailyAccountViewModel(
     /**
      * Persists the draft and closes the sheet.
      *
-     * A blank activity or a missing primary dimension is a no-op (the sheet stays open),
-     * and a second concurrent call is ignored, so a double tap cannot insert twice.
+     * A blank activity or a missing dimension is a no-op (the sheet stays open), and a
+     * second concurrent call is ignored, so a double tap cannot insert twice.
      */
     suspend fun saveDraft() {
         if (!saveMutex.tryLock()) return
@@ -231,12 +236,9 @@ class DailyAccountViewModel(
             val activity = draft.activity.trim()
             if (activity.isEmpty()) return
 
-            val primaryId = draft.dimensionChoice.primaryId ?: return
+            val dimensionId = draft.selectedDimensionId ?: return
             val availableDimensions = repo.getAllDimensions()
-            val primaryDimension = availableDimensions.firstOrNull { it.id == primaryId } ?: return
-            val secondaryDimensions = draft.dimensionChoice.secondaryIds.mapNotNull { id ->
-                availableDimensions.firstOrNull { it.id == id }
-            }
+            val dimension = availableDimensions.firstOrNull { it.id == dimensionId } ?: return
 
             val entry = Entry(
                 id = draft.editingEntryId ?: 0L,
@@ -246,8 +248,7 @@ class DailyAccountViewModel(
                 situationalNote = draft.situationalNote.takeIf { it.isNotBlank() },
                 direction = draft.direction,
                 energyValue = draft.energyValue.coerceIn(Entry.MIN_ENERGY_VALUE, Entry.MAX_ENERGY_VALUE),
-                primaryDimension = primaryDimension,
-                secondaryDimensions = secondaryDimensions,
+                dimension = dimension,
                 createdAtEpochMillis = editingEntry?.createdAtEpochMillis ?: clock.millis(),
             )
 
@@ -266,6 +267,13 @@ class DailyAccountViewModel(
         _draftState.value = null
     }
 
+    private fun resolveTimeSlot(preferredSlot: TimeSlot?): TimeSlot =
+        preferredSlot ?: if (_selectedDate.value == today) {
+            TimeSlot.defaultForTime(LocalTime.now(clock))
+        } else {
+            TimeSlot.EARLY_MORNING
+        }
+
     private fun EntryDraftState.withMatchedTemplate(activityName: String): EntryDraftState {
         val normalized = activityName.trim().lowercase(Locale.ROOT)
         if (normalized.isEmpty()) return copy(matchedTemplate = null)
@@ -279,8 +287,7 @@ class DailyAccountViewModel(
 
         val modified = direction != template.defaultDirection ||
             energyValue != template.defaultEnergyValue ||
-            dimensionChoice.primaryId != template.defaultPrimaryDimension.id ||
-            dimensionChoice.secondaryIds != template.defaultSecondaryDimensions.map { it.id }.toSet()
+            selectedDimensionId != template.defaultDimension.id
 
         return copy(
             hasModifiedTemplateDefaults = modified,

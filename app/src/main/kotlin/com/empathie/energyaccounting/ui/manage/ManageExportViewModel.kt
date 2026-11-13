@@ -2,12 +2,14 @@ package com.empathie.energyaccounting.ui.manage
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.empathie.energyaccounting.data.diagnostics.DebugLogExporter
 import com.empathie.energyaccounting.data.export.BackupSerializer
 import com.empathie.energyaccounting.data.export.CsvExporter
 import com.empathie.energyaccounting.data.export.PdfLabels
 import com.empathie.energyaccounting.data.export.PractitionerPdfGenerator
 import com.empathie.energyaccounting.data.export.RestoreMode
 import com.empathie.energyaccounting.data.repository.EnergyAccountingRepository
+import com.empathie.energyaccounting.data.settings.AppLanguage
 import com.empathie.energyaccounting.data.settings.AppSettings
 import com.empathie.energyaccounting.domain.model.ActivityTemplate
 import com.empathie.energyaccounting.domain.model.CheckInReminder
@@ -32,12 +34,13 @@ enum class ManageMessage {
     RESTORE_COMPLETE,
     RESTORE_FAILED,
     TEMPLATE_NAME_IN_USE,
+    DIMENSION_NAME_IN_USE,
     REMINDER_PERMISSION_DENIED,
 }
 
 /**
  * Backs the Manage & Export tab: templates, custom dimensions, check-in reminders,
- * exports/restores, and the appearance choice.
+ * exports/restores, diagnostics, and the appearance/language choices.
  *
  * The exports are built as bytes here so the Compose layer only needs to hand them to the
  * Storage Access Framework, and the report can be rendered without a Context.
@@ -48,6 +51,7 @@ class ManageExportViewModel(
     private val pdfGenerator: PractitionerPdfGenerator,
     private val reminderScheduler: ReminderScheduler,
     private val settings: AppSettings,
+    private val debugLogExporter: DebugLogExporter,
 ) : ViewModel() {
 
     val templates: StateFlow<List<ActivityTemplate>> = repo.observeTemplates()
@@ -62,12 +66,20 @@ class ManageExportViewModel(
     private val _themeMode = MutableStateFlow(settings.themeMode())
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
+    private val _appLanguage = MutableStateFlow(settings.appLanguage())
+    val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
+
     private val _message = MutableStateFlow<ManageMessage?>(null)
     val message: StateFlow<ManageMessage?> = _message.asStateFlow()
 
     fun setThemeMode(mode: ThemeMode) {
         _themeMode.value = mode
         settings.setThemeMode(mode)
+    }
+
+    fun setAppLanguage(language: AppLanguage) {
+        _appLanguage.value = language
+        settings.setAppLanguage(language)
     }
 
     fun consumeMessage() {
@@ -97,7 +109,8 @@ class ManageExportViewModel(
 
     suspend fun addCustomDimension(name: String) {
         val colorIndex = dimensions.value.size % 6
-        repo.createCustomDimension(name, colorIndex)
+        runCatching { repo.createCustomDimension(name, colorIndex) }
+            .onFailure { _message.value = ManageMessage.DIMENSION_NAME_IN_USE }
     }
 
     suspend fun removeCustomDimension(dimensionId: Long) {
@@ -113,8 +126,10 @@ class ManageExportViewModel(
         reminderScheduler.scheduleOrCancel(reminder)
     }
 
-    suspend fun buildCsv(): ByteArray = withContext(Dispatchers.IO) {
-        CsvExporter.exportEntries(repo.getAllEntries()).toByteArray()
+    suspend fun buildCsv(
+        dimensionLabel: (EnergyDimension) -> String = { it.name },
+    ): ByteArray = withContext(Dispatchers.IO) {
+        CsvExporter.exportEntries(repo.getAllEntries(), dimensionLabel).toByteArray()
     }
 
     suspend fun buildJson(): ByteArray = withContext(Dispatchers.IO) {
@@ -142,6 +157,14 @@ class ManageExportViewModel(
         val output = ByteArrayOutputStream()
         pdfGenerator.generateReport(output, startDate, endDate, accounts, insights, labels)
         output.toByteArray()
+    }
+
+    suspend fun buildDebugLog(
+        buildId: String,
+        localeTag: String,
+        themeName: String,
+    ): ByteArray = withContext(Dispatchers.IO) {
+        debugLogExporter.buildLogReport(buildId, localeTag, themeName).toByteArray()
     }
 
     suspend fun restore(json: String, mode: RestoreMode) {

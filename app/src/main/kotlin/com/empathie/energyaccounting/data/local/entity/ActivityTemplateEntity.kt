@@ -9,7 +9,6 @@ import androidx.room.PrimaryKey
  *
  * [normalizedName] is the lowercased, trimmed activity name and is unique, so a
  * template is matched case- and whitespace-insensitively.
- * [defaultSecondaryDimensionIdsCsv] holds comma-separated dimension ids.
  */
 @Entity(
     tableName = "activity_templates",
@@ -21,8 +20,7 @@ data class ActivityTemplateEntity(
     val displayName: String,
     val defaultDirection: String,
     val defaultEnergyValue: Int,
-    val defaultPrimaryDimensionId: Long,
-    val defaultSecondaryDimensionIdsCsv: String,
+    val defaultDimensionId: Long,
     val isPinned: Boolean,
     val usageCount: Int,
     val lastUsedEpochMillis: Long,

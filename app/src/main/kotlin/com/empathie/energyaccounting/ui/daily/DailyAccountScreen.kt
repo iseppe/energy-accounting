@@ -7,14 +7,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -70,6 +74,7 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
     val draft by viewModel.draftState.collectAsStateWithLifecycle()
     val isSaving by viewModel.isSaving.collectAsStateWithLifecycle()
     val isCalendarOpen by viewModel.isCalendarOpen.collectAsStateWithLifecycle()
+    val pendingFutureSlot by viewModel.pendingFutureSlotWarning.collectAsStateWithLifecycle()
     val templates by viewModel.templates.collectAsStateWithLifecycle()
     val dimensions by viewModel.dimensions.collectAsStateWithLifecycle()
     val calendarMonth by viewModel.calendarMonth.collectAsStateWithLifecycle()
@@ -91,7 +96,7 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { viewModel.openNewEntrySheet() },
+                onClick = { viewModel.requestNewEntrySheet() },
                 icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                 text = { Text(stringResource(R.string.add_entry)) },
             )
@@ -102,6 +107,7 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
                 .padding(innerPadding)
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 88.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
@@ -110,17 +116,17 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
             items(TimeSlot.entries) { timeSlot ->
                 TimeSlotCard(
                     ledger = account.ledgerFor(timeSlot),
-                    onAddToSlot = { viewModel.openNewEntrySheet(timeSlot) },
+                    onAddToSlot = { viewModel.requestNewEntrySheet(timeSlot) },
                     onEntryClick = viewModel::openEditEntrySheet,
                 )
             }
-            item { Spacer(Modifier.height(72.dp)) }
         }
     }
 
     if (isCalendarOpen) {
         CalendarHistorySheet(
             month = calendarMonth,
+            selectedDate = selectedDate,
             netBalances = calendarNetBalances,
             onMonthChange = viewModel::changeCalendarMonth,
             onSelectDate = viewModel::selectDate,
@@ -139,8 +145,7 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
             onTimeSlotChange = viewModel::onTimeSlotChange,
             onDirectionChange = viewModel::onDirectionChange,
             onEnergyValueChange = viewModel::onEnergyValueChange,
-            onTapDimension = viewModel::onTapDimension,
-            onLongPressDimension = viewModel::onLongPressDimension,
+            onSelectDimension = viewModel::onSelectDimension,
             onApplyTemplate = viewModel::applyTemplate,
             onUpdateTemplateDefaultsChange = viewModel::onUpdateTemplateDefaultsChange,
             onSave = { scope.launch { viewModel.saveDraft() } },
@@ -173,6 +178,32 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
             },
         )
     }
+
+    pendingFutureSlot?.let { timeSlot ->
+        val context = LocalContext.current
+        AlertDialog(
+            onDismissRequest = viewModel::dismissFutureEntryWarning,
+            title = { Text(stringResource(R.string.future_date_warning_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.future_date_warning_body,
+                        EnergyFormatter.formatDate(selectedDate),
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = viewModel::confirmFutureEntryWarning) {
+                    Text(stringResource(R.string.continue_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissFutureEntryWarning) {
+                    Text(stringResource(R.string.go_back))
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -188,6 +219,7 @@ private fun DateBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(horizontal = 4.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -213,11 +245,7 @@ private fun DateBar(
                     color = LocalEmpathieColors.current.onSurfaceMuted,
                 )
             }
-            if (isToday) {
-                TextButton(onClick = onOpenCalendar) {
-                    Text(stringResource(R.string.today))
-                }
-            } else {
+            if (!isToday) {
                 TextButton(onClick = onGoToToday) {
                     Text(stringResource(R.string.today))
                 }
@@ -244,12 +272,12 @@ private fun DailySummaryCard(account: DailyAccount) {
         ) {
             SummaryPill(
                 label = stringResource(R.string.total_gain),
-                value = "+${account.totalGain}",
+                value = EnergyFormatter.formatGainTotal(account.totalGain),
                 color = colors.gain,
             )
             SummaryPill(
                 label = stringResource(R.string.total_spend),
-                value = "-${account.totalSpend}",
+                value = EnergyFormatter.formatSpendTotal(account.totalSpend),
                 color = colors.spend,
             )
             SummaryPill(
@@ -342,8 +370,6 @@ private fun EntryRow(entry: Entry, onClick: () -> Unit) {
     val colors = LocalEmpathieColors.current
     val context = LocalContext.current
     val directionColor = if (entry.direction == Direction.GAIN) colors.gain else colors.spend
-    val primaryLabel = dimensionLabel(context, entry.primaryDimension)
-    val secondaryLabels = entry.secondaryDimensions.map { dimensionLabel(context, it) }
 
     Row(
         modifier = Modifier
@@ -377,7 +403,7 @@ private fun EntryRow(entry: Entry, onClick: () -> Unit) {
                 )
             }
             Text(
-                text = buildDimensionSummary(primaryLabel, secondaryLabels),
+                text = dimensionLabel(context, entry.dimension),
                 style = MaterialTheme.typography.labelSmall,
                 color = colors.onSurfaceMuted,
             )
@@ -390,13 +416,6 @@ private fun EntryRow(entry: Entry, onClick: () -> Unit) {
             color = directionColor,
             textAlign = TextAlign.End,
         )
-    }
-}
-
-private fun buildDimensionSummary(primary: String, secondaries: List<String>): String = buildString {
-    append("1° ").append(primary)
-    secondaries.forEach { secondary ->
-        append("   ·   2° ").append(secondary)
     }
 }
 

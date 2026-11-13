@@ -1,4 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 plugins {
     alias(libs.plugins.android.application)
@@ -8,6 +11,17 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+fun gitShortSha(): String = runCatching {
+    providers.exec { commandLine("git", "rev-parse", "--short=7", "HEAD") }
+        .standardOutput
+        .asText
+        .get()
+        .trim()
+}.getOrDefault("nogit")
+
+val buildId: String = "v0.2.0-${gitShortSha()}-" + LocalDateTime.now(ZoneOffset.UTC)
+    .format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmm"))
+
 android {
     namespace = "com.empathie.energyaccounting"
     compileSdk = 35
@@ -16,8 +30,10 @@ android {
         applicationId = "com.empathie.energyaccounting"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
+
+        buildConfigField("String", "BUILD_ID", "\"$buildId\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -39,6 +55,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     sourceSets {

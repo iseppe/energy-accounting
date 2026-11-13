@@ -50,12 +50,12 @@ class DailyAccountViewModelTest {
         vm.openNewEntrySheet(preferredSlot = null)
 
         val draft = vm.draftState.value!!
-        assertEquals(TimeSlot.AFTERNOON, draft.timeSlot) // 14:15 UTC -> AFTERNOON
+        assertEquals(TimeSlot.AFTERNOON, draft.timeSlot)
 
         vm.onActivityChange("Quiet walk")
         vm.onDirectionChange(Direction.GAIN)
         vm.onEnergyValueChange(40)
-        vm.onTapDimension(dims.first().id)
+        vm.onSelectDimension(dims.first().id)
         vm.saveDraft()
 
         assertNull(vm.draftState.value)
@@ -65,7 +65,20 @@ class DailyAccountViewModelTest {
     }
 
     @Test
-    fun `saving without a primary dimension keeps the draft open and inserts nothing`() = runTest {
+    fun `onSelectDimension switches the single selected dimension in one tap`() = runTest {
+        val vm = DailyAccountViewModel(repo, fixedClock)
+        val dims = repo.observeActiveDimensions().first()
+        vm.openNewEntrySheet(TimeSlot.EARLY_MORNING)
+
+        vm.onSelectDimension(dims[0].id)
+        assertEquals(dims[0].id, vm.draftState.value!!.selectedDimensionId)
+
+        vm.onSelectDimension(dims[1].id)
+        assertEquals(dims[1].id, vm.draftState.value!!.selectedDimensionId)
+    }
+
+    @Test
+    fun `saving without a dimension keeps the draft open and inserts nothing`() = runTest {
         val vm = DailyAccountViewModel(repo, fixedClock)
         vm.openNewEntrySheet(preferredSlot = TimeSlot.EVENING)
         vm.onActivityChange("Unknown activity")
@@ -78,7 +91,23 @@ class DailyAccountViewModelTest {
     }
 
     @Test
-    fun `editing an entry preserves its archived primary dimension`() = runTest {
+    fun `requestNewEntrySheet on a future date asks for confirmation before opening the sheet`() = runTest {
+        val vm = DailyAccountViewModel(repo, fixedClock)
+        vm.selectDate(LocalDate.of(2026, 11, 14))
+
+        vm.requestNewEntrySheet(TimeSlot.AFTERNOON)
+
+        assertNull(vm.draftState.value)
+        assertEquals(TimeSlot.AFTERNOON, vm.pendingFutureSlotWarning.value)
+
+        vm.confirmFutureEntryWarning()
+
+        assertNull(vm.pendingFutureSlotWarning.value)
+        assertEquals(TimeSlot.AFTERNOON, vm.draftState.value!!.timeSlot)
+    }
+
+    @Test
+    fun `editing an entry preserves its archived dimension`() = runTest {
         val date = LocalDate.of(2026, 11, 12)
         val customId = repo.createCustomDimension("Focus", 3)
         val custom = repo.observeAllDimensions().first().first { it.id == customId }
@@ -90,7 +119,7 @@ class DailyAccountViewModelTest {
                 situationalNote = null,
                 direction = Direction.SPEND,
                 energyValue = 60,
-                primaryDimension = custom,
+                dimension = custom,
                 createdAtEpochMillis = 1000L,
             )
         )
@@ -107,8 +136,8 @@ class DailyAccountViewModelTest {
 
         val saved = repo.observeDailyAccount(date).first()
             .slots.getValue(TimeSlot.AFTERNOON).entries.first()
-        assertEquals(customId, saved.primaryDimension.id)
-        assertTrue(saved.primaryDimension.isArchived)
+        assertEquals(customId, saved.dimension.id)
+        assertTrue(saved.dimension.isArchived)
         assertEquals("Note only", saved.situationalNote)
     }
 
@@ -130,7 +159,7 @@ class DailyAccountViewModelTest {
         vm.openNewEntrySheet(preferredSlot = TimeSlot.AFTERNOON)
         vm.onActivityChange("Quiet walk")
         vm.onEnergyValueChange(40)
-        vm.onTapDimension(dimensions.first().id)
+        vm.onSelectDimension(dimensions.first().id)
 
         val first = launch { vm.saveDraft() }
         val second = launch { vm.saveDraft() }

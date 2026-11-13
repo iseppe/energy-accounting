@@ -49,7 +49,6 @@ class ExportAndBackupTest {
     @Test
     fun `CsvExporter escapes commas, quotes, and newlines according to RFC 4180`() {
         val sensory = EnergyDimension(1L, "Sensory", SystemDimensionKey.SENSORY, 0)
-        val social = EnergyDimension(2L, "Social", SystemDimensionKey.SOCIAL, 1)
         val entry = Entry(
             id = 1L,
             date = LocalDate.of(2026, 11, 12),
@@ -58,25 +57,23 @@ class ExportAndBackupTest {
             situationalNote = "People were looking (\"situational\")",
             direction = Direction.SPEND,
             energyValue = 60,
-            primaryDimension = sensory,
-            secondaryDimensions = listOf(social),
+            dimension = sensory,
             createdAtEpochMillis = 1000L
         )
         val csv = CsvExporter.exportEntries(listOf(entry))
         val lines = csv.trim().lines()
-        assertEquals("Date,Time Slot,Activity,Situational Note,Direction,Signed Value,Primary Dimension,Secondary Dimensions", lines[0])
-        assertEquals("12/11/2026,EARLY_MORNING,\"School arrival, late\",\"People were looking (\"\"situational\"\")\",SPEND,-60,Sensory,Social", lines[1])
+        assertEquals("Date,Time Slot,Activity,Situational Note,Direction,Signed Value,Dimension", lines[0])
+        assertEquals("12/11/2026,EARLY_MORNING,\"School arrival, late\",\"People were looking (\"\"situational\"\")\",SPEND,-60,Sensory", lines[1])
     }
 
     @Test
-    fun `BackupSerializer restoreJson in MERGE mode deduplicates seeded dimensions and templates while remapping Entry foreign keys`() = runTest {
+    fun `BackupSerializer restoreJson in MERGE mode deduplicates seeded dimensions and remaps Entry foreign keys`() = runTest {
         val repo1 = EnergyAccountingRepository(db1)
         val repo2 = EnergyAccountingRepository(db2)
         val date = LocalDate.of(2026, 11, 12)
 
         val customDim1Id = repo1.createCustomDimension("Executive", 2)
         val customDim1 = repo1.observeAllDimensions().first().first { it.id == customDim1Id }
-        val sensory1 = repo1.observeAllDimensions().first().first { it.systemKey == SystemDimensionKey.SENSORY }
 
         repo1.saveEntry(
             Entry(
@@ -86,15 +83,13 @@ class ExportAndBackupTest {
                 situationalNote = "Maths",
                 direction = Direction.SPEND,
                 energyValue = 80,
-                primaryDimension = customDim1,
-                secondaryDimensions = listOf(sensory1),
+                dimension = customDim1,
                 createdAtEpochMillis = 5000L
             )
         )
 
         val json = BackupSerializer(db1).exportJson()
 
-        // db2 already has seeded dimensions AND an existing entry
         val cognitive2 = repo2.observeAllDimensions().first().first { it.systemKey == SystemDimensionKey.COGNITIVE }
         repo2.saveEntry(
             Entry(
@@ -104,7 +99,7 @@ class ExportAndBackupTest {
                 situationalNote = null,
                 direction = Direction.SPEND,
                 energyValue = 30,
-                primaryDimension = cognitive2,
+                dimension = cognitive2,
                 createdAtEpochMillis = 1000L
             )
         )
@@ -112,27 +107,49 @@ class ExportAndBackupTest {
         BackupSerializer(db2).restoreJson(json, RestoreMode.MERGE)
 
         val allDims2 = repo2.observeAllDimensions().first()
-        assertEquals(6, allDims2.size) // 5 seeded + 1 imported "Executive"
+        assertEquals(6, allDims2.size)
         val account2 = repo2.observeDailyAccount(date).first()
-        assertEquals(110, account2.totalSpend) // 30 + 80
+        assertEquals(110, account2.totalSpend)
         val importedEntry = account2.slots.getValue(TimeSlot.AFTERNOON).entries.first()
-        assertEquals("Executive", importedEntry.primaryDimension.name)
-        assertEquals(listOf("Sensory"), importedEntry.secondaryDimensions.map { it.name })
+        assertEquals("Executive", importedEntry.dimension.name)
     }
 
     @Test
-    fun `PractitionerPdfGenerator writes valid non-empty PDF stream`() {
+    fun `PractitionerPdfGenerator writes a valid PDF with a bordered table and localized accents`() {
         val date = LocalDate.of(2026, 11, 12)
-        val sensory = EnergyDimension(1L, "Sensory", SystemDimensionKey.SENSORY, 0)
-        val entry = Entry(1L, date, TimeSlot.AFTERNOON, "Quiet time in room", null, Direction.GAIN, 30, sensory, emptyList(), 100L)
+        val physical = EnergyDimension(1L, "Physical", SystemDimensionKey.PHYSICAL, 0)
+        val entry = Entry(
+            1L,
+            date,
+            TimeSlot.EARLY_MORNING,
+            "caffè + tempo mio con una nota molto lunga per verificare il wrapping nella tabella",
+            "Perché il treno era in ritardo",
+            Direction.GAIN,
+            20,
+            physical,
+            100L
+        )
         val account = DailyAccount.fromEntries(date, listOf(entry))
-        val insights = InsightsCalculator.calculate(date, date, listOf(entry), listOf(sensory))
+        val insights = InsightsCalculator.calculate(date, date, listOf(entry), listOf(physical))
+        val labels = PdfLabels.english.copy(
+            title = "Bilancio energetico giornaliero",
+            dimensionNames = mapOf(SystemDimensionKey.PHYSICAL to "Fisico"),
+        )
 
         val out = ByteArrayOutputStream()
-        PractitionerPdfGenerator().generateReport(out, date, date, listOf(account), insights)
+        PractitionerPdfGenerator().generateReport(out, date, date, listOf(account), insights, labels)
         val bytes = out.toByteArray()
+
         assertTrue(bytes.size > 100)
         assertEquals("%PDF", String(bytes.copyOfRange(0, 4)))
+
+        val pdfText = String(bytes, Charsets.ISO_8859_1)
+        assertTrue(pdfText.contains("re\n"))
+        assertTrue(pdfText.contains("S\n"))
+        assertTrue(pdfText.contains("Fisico"))
+        assertTrue(pdfText.contains("caffè"))
+        assertTrue(pdfText.contains("Perché"))
+        assertTrue(pdfText.contains("Bilancio energetico giornaliero"))
     }
 
     @Test
@@ -151,7 +168,7 @@ class ExportAndBackupTest {
                 situationalNote = null,
                 direction = Direction.SPEND,
                 energyValue = 30,
-                primaryDimension = cognitive1,
+                dimension = cognitive1,
                 createdAtEpochMillis = 1000L,
             )
         )
@@ -167,7 +184,7 @@ class ExportAndBackupTest {
                 situationalNote = null,
                 direction = Direction.GAIN,
                 energyValue = 50,
-                primaryDimension = sensory2,
+                dimension = sensory2,
                 createdAtEpochMillis = 2000L,
             )
         )
@@ -177,7 +194,43 @@ class ExportAndBackupTest {
         val templates = repo2.observeTemplates().first()
         assertEquals(1, templates.size)
         assertEquals(50, templates.first().defaultEnergyValue)
-        assertEquals(sensory2.id, templates.first().defaultPrimaryDimension.id)
+        assertEquals(sensory2.id, templates.first().defaultDimension.id)
+    }
+
+    @Test
+    fun `restoreJson accepts a schemaVersion 1 backup and maps primaryDimensionId to dimensionId`() = runTest {
+        val v1Json = """
+            {
+              "schemaVersion": 1,
+              "dimensions": [
+                {"id": 10, "systemKey": "SENSORY", "name": "Sensory", "colorIndex": 2, "isArchived": false}
+              ],
+              "templates": [
+                {"normalizedName": "sveglia", "displayName": "sveglia", "defaultDirection": "SPEND",
+                 "defaultEnergyValue": 30, "defaultPrimaryDimensionId": 10,
+                 "defaultSecondaryDimensionIds": [11], "isPinned": false, "usageCount": 1,
+                 "lastUsedEpochMillis": 1000}
+              ],
+              "entries": [
+                {"dateIso": "2026-11-12", "timeSlot": "EARLY_MORNING", "activity": "sveglia",
+                 "situationalNote": "test", "direction": "SPEND", "energyValue": 30,
+                 "primaryDimensionId": 10, "secondaryDimensionIds": [], "createdAtEpochMillis": 1000}
+              ],
+              "reminders": []
+            }
+        """.trimIndent()
+
+        BackupSerializer(db2).restoreJson(v1Json, RestoreMode.REPLACE)
+
+        val repo2 = EnergyAccountingRepository(db2)
+        val account = repo2.observeDailyAccount(LocalDate.of(2026, 11, 12)).first()
+        assertEquals(30, account.totalSpend)
+        assertEquals(
+            SystemDimensionKey.SENSORY,
+            account.slots.getValue(TimeSlot.EARLY_MORNING).entries.first().dimension.systemKey
+        )
+        val template = repo2.observeTemplates().first().first { it.activityName == "sveglia" }
+        assertEquals(SystemDimensionKey.SENSORY, template.defaultDimension.systemKey)
     }
 
     @Test
@@ -194,7 +247,7 @@ class ExportAndBackupTest {
                 situationalNote = null,
                 direction = Direction.SPEND,
                 energyValue = 30,
-                primaryDimension = cognitive2,
+                dimension = cognitive2,
                 createdAtEpochMillis = 1000L,
             )
         )
@@ -207,7 +260,7 @@ class ExportAndBackupTest {
                     activity = "Broken",
                     direction = "SPEND",
                     energyValue = 10,
-                    primaryDimensionId = 1L,
+                    dimensionId = 1L,
                     createdAtEpochMillis = 1L,
                 )
             )
@@ -235,35 +288,5 @@ class ExportAndBackupTest {
         assertTrue(evening.isEnabled)
         assertEquals(21, evening.hour)
         assertEquals(30, evening.minute)
-    }
-
-    @Test
-    fun `PractitionerPdfGenerator keeps Italian accents and uses the supplied labels`() {
-        val date = LocalDate.of(2026, 11, 12)
-        val sensory = EnergyDimension(1L, "Sensory", SystemDimensionKey.SENSORY, 0)
-        val entry = Entry(
-            1L,
-            date,
-            TimeSlot.AFTERNOON,
-            "Caffè con amici",
-            "Perché era rumoroso",
-            Direction.SPEND,
-            30,
-            sensory,
-            emptyList(),
-            100L,
-        )
-        val account = DailyAccount.fromEntries(date, listOf(entry))
-        val insights = InsightsCalculator.calculate(date, date, listOf(entry), listOf(sensory))
-        val labels = PdfLabels.english.copy(title = "Bilancio energetico giornaliero")
-
-        val out = ByteArrayOutputStream()
-        PractitionerPdfGenerator().generateReport(out, date, date, listOf(account), insights, labels)
-
-        val pdfText = String(out.toByteArray(), Charsets.ISO_8859_1)
-        assertTrue(pdfText.contains("Caffè"))
-        assertTrue(pdfText.contains("Perché"))
-        assertTrue(pdfText.contains("Bilancio energetico giornaliero"))
-        assertTrue(pdfText.contains("1°"))
     }
 }

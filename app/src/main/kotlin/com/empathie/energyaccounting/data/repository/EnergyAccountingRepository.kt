@@ -27,11 +27,12 @@ import java.util.Locale
  * The single gateway between the UI and the on-device ledger.
  *
  * Rules that live here rather than in the UI:
- * - entries always store their activity trimmed and their secondary dimensions without
- *   duplicates or the primary dimension;
+ * - entries always store their activity trimmed and attribute the whole energy value to
+ *   one dimension;
  * - reusing an Activity never overwrites its template's baseline defaults unless the
  *   caller explicitly asks for it;
- * - a custom dimension that historical data references is archived, never deleted.
+ * - a custom dimension that historical data references is archived, never deleted;
+ * - custom dimension names are unique case-insensitively.
  */
 class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
 
@@ -68,7 +69,11 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
     fun observeTemplates(): Flow<List<ActivityTemplate>> =
         combine(dao.observeTemplates(), dao.observeAllDimensions()) { templates, dimensions ->
             val dimensionsById = dimensions.associateBy { it.id }
-            templates.mapNotNull { template -> template.toDomain(dimensionsById) }
+            templates.mapNotNull { template ->
+                dimensionsById[template.defaultDimensionId]?.let { dimension ->
+                    template.toDomain(dimension)
+                }
+            }
         }
 
     fun observePeriodInsights(startDate: LocalDate, endDate: LocalDate): Flow<PeriodInsights> =
@@ -98,13 +103,12 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
      */
     suspend fun saveEntry(entry: Entry, updateTemplateDefaults: Boolean = false): Long =
         db.withTransaction {
-            val secondaryIds = entry.secondaryDimensions.map { it.id }
             if (entry.id == 0L) {
-                val newId = dao.insertEntryWithSecondaries(entry.toEntity(), secondaryIds)
+                val newId = dao.insertEntry(entry.toEntity())
                 touchTemplate(entry, incrementUsage = true, updateDefaults = updateTemplateDefaults)
                 newId
             } else {
-                dao.updateEntryWithSecondaries(entry.toEntity(), secondaryIds)
+                dao.updateEntry(entry.toEntity())
                 if (updateTemplateDefaults) {
                     touchTemplate(entry, incrementUsage = false, updateDefaults = true)
                 }
@@ -119,6 +123,11 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
     suspend fun createCustomDimension(name: String, colorIndex: Int): Long {
         val trimmed = name.trim()
         require(trimmed.isNotEmpty()) { "dimension name must not be blank" }
+        val duplicate = dao.getAllDimensions().any {
+            it.name.trim().equals(trimmed, ignoreCase = true)
+        }
+        require(!duplicate) { "A dimension named '$trimmed' already exists" }
+
         return dao.insertDimension(
             EnergyDimensionEntity(
                 name = trimmed,
@@ -137,12 +146,8 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
             val dimension = dao.getDimension(dimensionId) ?: return@withTransaction
             if (dimension.systemKey != null) return@withTransaction
 
-            val usedByEntries = dao.countEntriesWithPrimaryDimension(dimensionId) > 0 ||
-                dao.countEntriesWithSecondaryDimension(dimensionId) > 0
-            val usedByTemplates = dao.getTemplates().any { template ->
-                template.defaultPrimaryDimensionId == dimensionId ||
-                    template.decodeSecondaryDimensionIds().contains(dimensionId)
-            }
+            val usedByEntries = dao.countEntriesWithDimension(dimensionId) > 0
+            val usedByTemplates = dao.getTemplates().any { it.defaultDimensionId == dimensionId }
 
             if (usedByEntries || usedByTemplates) {
                 dao.updateDimension(dimension.copy(isArchived = true))
@@ -205,8 +210,7 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
                     displayName = entry.activity,
                     defaultDirection = entry.direction.name,
                     defaultEnergyValue = entry.energyValue,
-                    defaultPrimaryDimensionId = entry.primaryDimension.id,
-                    defaultSecondaryDimensionIdsCsv = encodeSecondaryDimensionIds(entry.secondaryDimensions),
+                    defaultDimensionId = entry.dimension.id,
                     isPinned = false,
                     usageCount = if (incrementUsage) 1 else 0,
                     lastUsedEpochMillis = entry.createdAtEpochMillis,
@@ -220,16 +224,7 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
                 displayName = if (updateDefaults) entry.activity else existing.displayName,
                 defaultDirection = if (updateDefaults) entry.direction.name else existing.defaultDirection,
                 defaultEnergyValue = if (updateDefaults) entry.energyValue else existing.defaultEnergyValue,
-                defaultPrimaryDimensionId = if (updateDefaults) {
-                    entry.primaryDimension.id
-                } else {
-                    existing.defaultPrimaryDimensionId
-                },
-                defaultSecondaryDimensionIdsCsv = if (updateDefaults) {
-                    encodeSecondaryDimensionIds(entry.secondaryDimensions)
-                } else {
-                    existing.defaultSecondaryDimensionIdsCsv
-                },
+                defaultDimensionId = if (updateDefaults) entry.dimension.id else existing.defaultDimensionId,
                 usageCount = existing.usageCount + if (incrementUsage) 1 else 0,
                 lastUsedEpochMillis = maxOf(existing.lastUsedEpochMillis, entry.createdAtEpochMillis),
             )
@@ -237,14 +232,6 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
     }
 
     private fun normalize(activity: String): String = activity.trim().lowercase(Locale.ROOT)
-
-    private fun encodeSecondaryDimensionIds(dimensions: List<EnergyDimension>): String =
-        dimensions.map { it.id }.distinct().joinToString(",")
-
-    private fun ActivityTemplateEntity.decodeSecondaryDimensionIds(): List<Long> =
-        defaultSecondaryDimensionIdsCsv
-            .split(',')
-            .mapNotNull { it.trim().toLongOrNull() }
 
     private fun EnergyDimensionEntity.toDomain(): EnergyDimension = EnergyDimension(
         id = id,
@@ -262,8 +249,7 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
         situationalNote = entry.situationalNote,
         direction = Direction.valueOf(entry.direction),
         energyValue = entry.energyValue,
-        primaryDimension = primaryDimension.toDomain(),
-        secondaryDimensions = secondaryDimensions.map { it.toDomain() },
+        dimension = dimension.toDomain(),
         createdAtEpochMillis = entry.createdAtEpochMillis,
     )
 
@@ -275,7 +261,7 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
         situationalNote = situationalNote,
         direction = direction.name,
         energyValue = energyValue,
-        primaryDimensionId = primaryDimension.id,
+        dimensionId = dimension.id,
         createdAtEpochMillis = createdAtEpochMillis,
     )
 
@@ -285,32 +271,23 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
         displayName = activityName,
         defaultDirection = defaultDirection.name,
         defaultEnergyValue = defaultEnergyValue,
-        defaultPrimaryDimensionId = defaultPrimaryDimension.id,
-        defaultSecondaryDimensionIdsCsv = encodeSecondaryDimensionIds(defaultSecondaryDimensions),
+        defaultDimensionId = defaultDimension.id,
         isPinned = isPinned,
         usageCount = usageCount,
         lastUsedEpochMillis = lastUsedEpochMillis,
     )
 
-    private fun ActivityTemplateEntity.toDomain(
-        dimensionsById: Map<Long, EnergyDimensionEntity>,
-    ): ActivityTemplate? {
-        val primary = dimensionsById[defaultPrimaryDimensionId] ?: return null
-        val secondaries = decodeSecondaryDimensionIds()
-            .mapNotNull { dimensionsById[it] }
-            .map { it.toDomain() }
-        return ActivityTemplate(
+    private fun ActivityTemplateEntity.toDomain(dimension: EnergyDimensionEntity): ActivityTemplate =
+        ActivityTemplate(
             id = id,
             activityName = displayName,
             defaultDirection = Direction.valueOf(defaultDirection),
             defaultEnergyValue = defaultEnergyValue,
-            defaultPrimaryDimension = primary.toDomain(),
-            defaultSecondaryDimensions = secondaries,
+            defaultDimension = dimension.toDomain(),
             isPinned = isPinned,
             usageCount = usageCount,
             lastUsedEpochMillis = lastUsedEpochMillis,
         )
-    }
 
     private fun EntryEntity.signedValue(): Int =
         if (Direction.valueOf(direction) == Direction.GAIN) energyValue else -energyValue

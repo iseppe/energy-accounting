@@ -1,6 +1,7 @@
 package com.empathie.energyaccounting.ui.manage
 
 import android.Manifest
+import android.app.Activity
 import android.app.TimePickerDialog
 import android.content.Context
 import android.content.pm.PackageManager
@@ -9,24 +10,21 @@ import android.text.format.DateFormat
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -37,6 +35,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,21 +54,25 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.empathie.energyaccounting.BuildConfig
 import com.empathie.energyaccounting.R
 import com.empathie.energyaccounting.data.export.PdfLabels
 import com.empathie.energyaccounting.data.export.RestoreMode
+import com.empathie.energyaccounting.data.settings.AppLanguage
 import com.empathie.energyaccounting.domain.model.ActivityTemplate
 import com.empathie.energyaccounting.domain.model.CheckInReminder
 import com.empathie.energyaccounting.domain.model.Direction
 import com.empathie.energyaccounting.domain.model.EnergyDimension
+import com.empathie.energyaccounting.domain.model.TimeSlot
 import com.empathie.energyaccounting.domain.service.EnergyFormatter
+import com.empathie.energyaccounting.reminder.CheckInReminderReceiver
 import com.empathie.energyaccounting.ui.common.DateField
 import com.empathie.energyaccounting.ui.daily.dimensionLabel
 import com.empathie.energyaccounting.ui.daily.timeSlotLabel
@@ -79,9 +82,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
+import java.time.LocalTime
+import java.util.Locale
 import kotlin.math.roundToInt
 
-private enum class ExportKind { PDF, CSV, JSON }
+private enum class ExportKind { PDF, CSV, JSON, DEBUG_LOG }
 
 private data class ExportRequest(
     val kind: ExportKind,
@@ -92,11 +97,13 @@ private data class ExportRequest(
 @Composable
 fun ManageExportScreen(viewModel: ManageExportViewModel) {
     val context = LocalContext.current
+    val activity = context as? Activity
     val scope = rememberCoroutineScope()
     val templates by viewModel.templates.collectAsStateWithLifecycle()
     val dimensions by viewModel.dimensions.collectAsStateWithLifecycle()
     val reminders by viewModel.reminders.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
 
     var editingTemplate by remember { mutableStateOf<ActivityTemplate?>(null) }
@@ -107,6 +114,19 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
     var pendingExport by remember { mutableStateOf<ExportRequest?>(null) }
     var pendingRestoreMode by remember { mutableStateOf<RestoreMode?>(null) }
     var pendingEnableReminder by remember { mutableStateOf<CheckInReminder?>(null) }
+
+    fun postTestNotification() {
+        val posted = CheckInReminderReceiver.postTestNotification(
+            context,
+            TimeSlot.defaultForTime(LocalTime.now()),
+        )
+        val text = if (posted) {
+            context.getString(R.string.test_notification_sent)
+        } else {
+            context.getString(R.string.reminder_permission_rationale)
+        }
+        Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+    }
 
     val createDocument = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("*/*")
@@ -124,8 +144,13 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                             PdfLabels.from(context),
                         )
 
-                        ExportKind.CSV -> viewModel.buildCsv()
+                        ExportKind.CSV -> viewModel.buildCsv { dimensionLabel(context, it) }
                         ExportKind.JSON -> viewModel.buildJson()
+                        ExportKind.DEBUG_LOG -> viewModel.buildDebugLog(
+                            buildId = BuildConfig.BUILD_ID,
+                            localeTag = Locale.getDefault().toLanguageTag(),
+                            themeName = themeMode.name,
+                        )
                     }
                 }.getOrNull()
             }
@@ -175,6 +200,12 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
         }
     }
 
+    val testNotificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) postTestNotification() else viewModel.reportReminderPermissionDenied()
+    }
+
     LaunchedEffect(message) {
         val current = message ?: return@LaunchedEffect
         val text = when (current) {
@@ -182,6 +213,7 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
             ManageMessage.RESTORE_COMPLETE -> context.getString(R.string.restore_complete)
             ManageMessage.RESTORE_FAILED -> context.getString(R.string.restore_failed)
             ManageMessage.TEMPLATE_NAME_IN_USE -> context.getString(R.string.template_name_in_use)
+            ManageMessage.DIMENSION_NAME_IN_USE -> context.getString(R.string.dimension_name_in_use)
             ManageMessage.REMINDER_PERMISSION_DENIED -> context.getString(R.string.reminder_permission_rationale)
         }
         Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
@@ -191,6 +223,7 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -208,7 +241,34 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                                     when (mode) {
                                         ThemeMode.SYSTEM -> stringResource(R.string.theme_system)
                                         ThemeMode.DARK -> stringResource(R.string.theme_dark)
-                                        ThemeMode.WARM_LIGHT -> stringResource(R.string.theme_warm_light)
+                                        ThemeMode.LIGHT -> stringResource(R.string.theme_light)
+                                    }
+                                )
+                            },
+                        )
+                    }
+                }
+
+                Text(
+                    text = stringResource(R.string.language),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = LocalEmpathieColors.current.onSurfaceMuted,
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AppLanguage.entries.forEach { language ->
+                        FilterChip(
+                            selected = appLanguage == language,
+                            onClick = {
+                                viewModel.setAppLanguage(language)
+                                activity?.recreate()
+                            },
+                            label = {
+                                Text(
+                                    when (language) {
+                                        AppLanguage.SYSTEM -> stringResource(R.string.language_system)
+                                        AppLanguage.ENGLISH -> stringResource(R.string.language_english)
+                                        AppLanguage.ITALIAN -> stringResource(R.string.language_italian)
                                     }
                                 )
                             },
@@ -280,6 +340,24 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                         },
                     )
                 }
+
+                FilledTonalButton(
+                    onClick = {
+                        val needsPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.POST_NOTIFICATIONS,
+                            ) != PackageManager.PERMISSION_GRANTED
+                        if (needsPermission) {
+                            testNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            postTestNotification()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.send_test_notification))
+                }
             }
         }
 
@@ -310,6 +388,15 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                     Text(stringResource(R.string.export_json_backup))
                 }
                 OutlinedButton(
+                    onClick = {
+                        pendingExport = ExportRequest(ExportKind.DEBUG_LOG)
+                        createDocument.launch("energy-accounting-debug-${LocalDate.now()}.log")
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.export_debug_log))
+                }
+                OutlinedButton(
                     onClick = { showRestoreMode = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -318,7 +405,17 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
             }
         }
 
-        item { Spacer(Modifier.height(16.dp)) }
+        item {
+            Text(
+                text = stringResource(R.string.build_id_label, BuildConfig.BUILD_ID),
+                style = MaterialTheme.typography.labelSmall,
+                color = LocalEmpathieColors.current.onSurfaceMuted,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+            )
+        }
     }
 
     if (showCreateTemplate || editingTemplate != null) {
@@ -351,7 +448,9 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
         PdfRangeDialog(
             onDismiss = { showPdfRange = false },
             onExport = { start, end ->
-                pendingExport = ExportRequest(ExportKind.PDF, start, end)
+                val (normalizedStart, normalizedEnd) =
+                    if (start.isAfter(end)) end to start else start to end
+                pendingExport = ExportRequest(ExportKind.PDF, normalizedStart, normalizedEnd)
                 createDocument.launch("energy-accounting-report-${LocalDate.now()}.pdf")
                 showPdfRange = false
             },
@@ -386,7 +485,7 @@ private fun TemplateRow(
             Text(template.activityName, style = MaterialTheme.typography.bodyMedium)
             Text(
                 text = "${EnergyFormatter.formatSignedValue(template.defaultDirection, template.defaultEnergyValue)}" +
-                    " · ${dimensionLabel(context, template.defaultPrimaryDimension)}" +
+                    " · ${dimensionLabel(context, template.defaultDimension)}" +
                     " · ${template.usageCount}×",
                 style = MaterialTheme.typography.labelSmall,
                 color = colors.onSurfaceMuted,
@@ -415,13 +514,14 @@ private fun DimensionRow(
     onToggleArchive: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val context = LocalContext.current
     val colors = LocalEmpathieColors.current
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(dimension.name, style = MaterialTheme.typography.bodyMedium)
+            Text(dimensionLabel(context, dimension), style = MaterialTheme.typography.bodyMedium)
             if (dimension.isArchived) {
                 Text(
-                    text = stringResource(R.string.archive),
+                    text = stringResource(R.string.dimension_archived),
                     style = MaterialTheme.typography.labelSmall,
                     color = colors.onSurfaceMuted,
                 )
@@ -493,19 +593,14 @@ private fun TemplateEditDialog(
     var name by remember { mutableStateOf(template?.activityName ?: "") }
     var direction by remember { mutableStateOf(template?.defaultDirection ?: Direction.SPEND) }
     var value by remember { mutableStateOf(template?.defaultEnergyValue ?: 30) }
-    var primaryId by remember {
-        mutableStateOf(template?.defaultPrimaryDimension?.id ?: dimensions.firstOrNull()?.id)
-    }
-    var secondaryIds by remember {
-        mutableStateOf(template?.defaultSecondaryDimensions?.map { it.id }?.toSet() ?: emptySet<Long>())
+    var dimensionId by remember {
+        mutableStateOf(template?.defaultDimension?.id ?: dimensions.firstOrNull()?.id)
     }
 
     // Archived dimensions stay visible only where this template already references them,
     // so the editor can never create a new template the Add sheet cannot represent.
     val selectableDimensions = dimensions.filter { dimension ->
-        !dimension.isArchived ||
-            template?.defaultPrimaryDimension?.id == dimension.id ||
-            template?.defaultSecondaryDimensions?.any { it.id == dimension.id } == true
+        !dimension.isArchived || template?.defaultDimension?.id == dimension.id
     }
 
     AlertDialog(
@@ -542,10 +637,10 @@ private fun TemplateEditDialog(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Slider(
-                        value = value.toFloat().coerceIn(10f, 100f),
-                        onValueChange = { value = ((it / 10f).roundToInt() * 10).coerceIn(1, 100) },
-                        valueRange = 10f..100f,
-                        steps = 8,
+                        value = value.toFloat().coerceIn(5f, 100f),
+                        onValueChange = { value = ((it / 5f).roundToInt() * 5).coerceIn(5, 100) },
+                        valueRange = 5f..100f,
+                        steps = 18,
                         modifier = Modifier.weight(1f),
                     )
                     Text(
@@ -555,37 +650,14 @@ private fun TemplateEditDialog(
                     )
                 }
                 Text(
-                    text = stringResource(R.string.default_dimensions) + " · 1°",
+                    text = stringResource(R.string.default_dimension),
                     style = MaterialTheme.typography.labelSmall,
                 )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     selectableDimensions.forEach { dimension ->
                         FilterChip(
-                            selected = primaryId == dimension.id,
-                            onClick = {
-                                primaryId = dimension.id
-                                secondaryIds = secondaryIds - dimension.id
-                            },
-                            label = { Text(dimensionChipLabel(context, dimension)) },
-                        )
-                    }
-                }
-                Text(
-                    text = stringResource(R.string.default_dimensions) + " · 2°",
-                    style = MaterialTheme.typography.labelSmall,
-                )
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    selectableDimensions.forEach { dimension ->
-                        FilterChip(
-                            selected = dimension.id in secondaryIds,
-                            enabled = dimension.id != primaryId,
-                            onClick = {
-                                secondaryIds = if (dimension.id in secondaryIds) {
-                                    secondaryIds - dimension.id
-                                } else {
-                                    secondaryIds + dimension.id
-                                }
-                            },
+                            selected = dimensionId == dimension.id,
+                            onClick = { dimensionId = dimension.id },
                             label = { Text(dimensionChipLabel(context, dimension)) },
                         )
                     }
@@ -593,21 +665,18 @@ private fun TemplateEditDialog(
             }
         },
         confirmButton = {
-            val primary = selectableDimensions.firstOrNull { it.id == primaryId }
+            val dimension = selectableDimensions.firstOrNull { it.id == dimensionId }
             TextButton(
-                enabled = name.isNotBlank() && primary != null,
+                enabled = name.isNotBlank() && dimension != null,
                 onClick = {
-                    if (primary != null) {
+                    if (dimension != null) {
                         onSave(
                             ActivityTemplate(
                                 id = template?.id ?: 0L,
                                 activityName = name,
                                 defaultDirection = direction,
                                 defaultEnergyValue = value,
-                                defaultPrimaryDimension = primary,
-                                defaultSecondaryDimensions = selectableDimensions.filter {
-                                    it.id in secondaryIds && it.id != primary.id
-                                },
+                                defaultDimension = dimension,
                                 isPinned = template?.isPinned ?: false,
                                 usageCount = template?.usageCount ?: 0,
                                 lastUsedEpochMillis = template?.lastUsedEpochMillis ?: 0L,

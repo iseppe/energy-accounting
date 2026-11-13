@@ -45,7 +45,6 @@ class EnergyAccountingRepositoryTest {
         val sensory = dims.first { it.name == "Sensory" }
         val today = LocalDate.of(2026, 11, 12)
 
-        // First log creates template with baseline -30 Cognitive
         repo.saveEntry(
             Entry(
                 date = today,
@@ -54,13 +53,12 @@ class EnergyAccountingRepositoryTest {
                 situationalNote = null,
                 direction = Direction.SPEND,
                 energyValue = 30,
-                primaryDimension = cognitive,
+                dimension = cognitive,
                 createdAtEpochMillis = 1000L
             ),
             updateTemplateDefaults = false
         )
 
-        // Second log with different casing/spaces and tweaked value -60 does NOT overwrite template default
         repo.saveEntry(
             Entry(
                 date = today.plusDays(1),
@@ -69,7 +67,7 @@ class EnergyAccountingRepositoryTest {
                 situationalNote = "Poor sleep",
                 direction = Direction.SPEND,
                 energyValue = 60,
-                primaryDimension = sensory,
+                dimension = sensory,
                 createdAtEpochMillis = 2000L
             ),
             updateTemplateDefaults = false
@@ -80,10 +78,9 @@ class EnergyAccountingRepositoryTest {
         val tpl = templatesAfterIsolatedTweaks.first()
         assertEquals("Morning routine", tpl.activityName)
         assertEquals(30, tpl.defaultEnergyValue)
-        assertEquals(cognitive.id, tpl.defaultPrimaryDimension.id)
+        assertEquals(cognitive.id, tpl.defaultDimension.id)
         assertEquals(2, tpl.usageCount)
 
-        // Third log with updateTemplateDefaults = true explicitly updates baseline to -50 Sensory
         repo.saveEntry(
             Entry(
                 date = today.plusDays(2),
@@ -92,7 +89,7 @@ class EnergyAccountingRepositoryTest {
                 situationalNote = null,
                 direction = Direction.SPEND,
                 energyValue = 50,
-                primaryDimension = sensory,
+                dimension = sensory,
                 createdAtEpochMillis = 3000L
             ),
             updateTemplateDefaults = true
@@ -100,7 +97,7 @@ class EnergyAccountingRepositoryTest {
 
         val updatedTpl = repo.observeTemplates().first().first()
         assertEquals(50, updatedTpl.defaultEnergyValue)
-        assertEquals(sensory.id, updatedTpl.defaultPrimaryDimension.id)
+        assertEquals(sensory.id, updatedTpl.defaultDimension.id)
         assertEquals(3, updatedTpl.usageCount)
     }
 
@@ -118,7 +115,7 @@ class EnergyAccountingRepositoryTest {
                 situationalNote = null,
                 direction = Direction.SPEND,
                 energyValue = 80,
-                primaryDimension = usedDim,
+                dimension = usedDim,
                 createdAtEpochMillis = 1000L
             )
         )
@@ -132,14 +129,15 @@ class EnergyAccountingRepositoryTest {
         assertTrue(allDims.any { it.id == usedId && it.isArchived })
         assertFalse(allDims.any { it.id == unusedId })
 
-        // Historical DailyAccount still loads the entry with its archived dimension intact
         val account = repo.observeDailyAccount(LocalDate.of(2026, 11, 12)).first()
         assertEquals(80, account.totalSpend)
-        assertEquals("Executive Function", account.slots.getValue(TimeSlot.AFTERNOON).entries.first().primaryDimension.name)
+        assertEquals(
+            "Executive Function",
+            account.slots.getValue(TimeSlot.AFTERNOON).entries.first().dimension.name
+        )
 
-        // The auto-learned template for that entry also survives the archive
         val template = repo.observeTemplates().first().first { it.activityName == "Tax paperwork" }
-        assertEquals("Executive Function", template.defaultPrimaryDimension.name)
+        assertEquals("Executive Function", template.defaultDimension.name)
     }
 
     @Test
@@ -156,7 +154,7 @@ class EnergyAccountingRepositoryTest {
                 situationalNote = null,
                 direction = Direction.SPEND,
                 energyValue = 30,
-                primaryDimension = cognitive,
+                dimension = cognitive,
                 createdAtEpochMillis = 1000L,
             )
         )
@@ -165,7 +163,7 @@ class EnergyAccountingRepositoryTest {
             activityName = "  MORNING ROUTINE ",
             defaultDirection = Direction.GAIN,
             defaultEnergyValue = 10,
-            defaultPrimaryDimension = sensory,
+            defaultDimension = sensory,
         )
 
         val result = runCatching { repo.saveTemplate(duplicate) }
@@ -174,6 +172,19 @@ class EnergyAccountingRepositoryTest {
         val templates = repo.observeTemplates().first()
         assertEquals(1, templates.size)
         assertEquals(30, templates.first().defaultEnergyValue)
-        assertEquals(cognitive.id, templates.first().defaultPrimaryDimension.id)
+        assertEquals(cognitive.id, templates.first().defaultDimension.id)
+    }
+
+    @Test
+    fun `createCustomDimension rejects duplicate names case-insensitively`() = runTest {
+        val resultSeeded = runCatching { repo.createCustomDimension("  physical ", 1) }
+        assertTrue(resultSeeded.exceptionOrNull() is IllegalArgumentException)
+
+        repo.createCustomDimension("Focus", 2)
+        val resultCustom = runCatching { repo.createCustomDimension("FOCUS", 3) }
+        assertTrue(resultCustom.exceptionOrNull() is IllegalArgumentException)
+
+        val focusCount = repo.observeAllDimensions().first().count { it.name.equals("Focus", ignoreCase = true) }
+        assertEquals(1, focusCount)
     }
 }

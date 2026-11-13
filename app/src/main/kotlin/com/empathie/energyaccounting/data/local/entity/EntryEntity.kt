@@ -17,13 +17,13 @@ import androidx.room.PrimaryKey
         ForeignKey(
             entity = EnergyDimensionEntity::class,
             parentColumns = ["id"],
-            childColumns = ["primaryDimensionId"],
+            childColumns = ["dimensionId"],
             onDelete = ForeignKey.RESTRICT,
         ),
     ],
     indices = [
         Index(value = ["dateIso"]),
-        Index(value = ["primaryDimensionId"]),
+        Index(value = ["dimensionId"]),
         Index(value = ["dateIso", "timeSlot"]),
     ],
 )
@@ -35,6 +35,6 @@ data class EntryEntity(
     val situationalNote: String?,
     val direction: String,
     val energyValue: Int,
-    val primaryDimensionId: Long,
+    val dimensionId: Long,
     val createdAtEpochMillis: Long,
 )

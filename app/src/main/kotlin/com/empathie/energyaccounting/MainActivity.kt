@@ -1,9 +1,12 @@
 package com.empathie.energyaccounting
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -23,13 +26,18 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.empathie.energyaccounting.data.diagnostics.DebugLogExporter
 import com.empathie.energyaccounting.data.export.BackupSerializer
 import com.empathie.energyaccounting.data.export.PractitionerPdfGenerator
+import com.empathie.energyaccounting.data.settings.AppSettings
+import com.empathie.energyaccounting.data.settings.LocaleHelper
 import com.empathie.energyaccounting.domain.model.TimeSlot
 import com.empathie.energyaccounting.reminder.CheckInReminderReceiver
 import com.empathie.energyaccounting.reminder.ReminderScheduler
@@ -40,6 +48,7 @@ import com.empathie.energyaccounting.ui.insights.InsightsViewModel
 import com.empathie.energyaccounting.ui.manage.ManageExportScreen
 import com.empathie.energyaccounting.ui.manage.ManageExportViewModel
 import com.empathie.energyaccounting.ui.theme.EmpathieTheme
+import com.empathie.energyaccounting.ui.theme.LocalEmpathieColors
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
@@ -61,20 +70,22 @@ internal fun Intent.toAddSheetDeepLink(): AddSheetDeepLink? {
 private data class DeepLinkEvent(val id: Long, val timeSlot: TimeSlot?)
 
 /**
- * Single-activity shell with the three tabs and the notification deep link.
- *
- * A tapped check-in notification switches to the Daily Account tab, selects today and
- * opens the entry sheet already pointed at the slot that fired. Extras are consumed and
- * the event is cleared after handling, so a rotation never replays it and a second
- * notification for the same slot still opens a fresh sheet.
+ * Single-activity shell with the three tabs, the notification deep link, in-app locale
+ * wrapping, predictive back and edge-to-edge system bar contrast.
  */
 class MainActivity : ComponentActivity() {
 
     private val deepLinkEvents = MutableStateFlow<DeepLinkEvent?>(null)
     private var nextDeepLinkId = 0L
 
+    override fun attachBaseContext(newBase: Context) {
+        val language = AppSettings(newBase).appLanguage()
+        super.attachBaseContext(LocaleHelper.wrap(newBase, language))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         readDeepLink(intent, isFreshLaunch = savedInstanceState == null)
 
         setContent {
@@ -99,6 +110,7 @@ class MainActivity : ComponentActivity() {
                             pdfGenerator = PractitionerPdfGenerator(),
                             reminderScheduler = ReminderScheduler(app),
                             settings = app.settings,
+                            debugLogExporter = DebugLogExporter(app.database),
                         )
                     }
                 }
@@ -117,6 +129,12 @@ class MainActivity : ComponentActivity() {
             }
 
             EmpathieTheme(themeMode = themeMode) {
+                SyncSystemBars()
+
+                BackHandler(enabled = selectedTab != 0) {
+                    selectedTab = 0
+                }
+
                 AppShell(
                     selectedTab = selectedTab,
                     onSelectTab = { selectedTab = it },
@@ -142,6 +160,19 @@ class MainActivity : ComponentActivity() {
         }
         intent.removeExtra(CheckInReminderReceiver.EXTRA_OPEN_ADD_SHEET)
         intent.removeExtra(CheckInReminderReceiver.EXTRA_TIME_SLOT)
+    }
+}
+
+@Composable
+private fun SyncSystemBars() {
+    val colors = LocalEmpathieColors.current
+    val view = LocalView.current
+    LaunchedEffect(colors.isDark) {
+        val activity = view.context as? ComponentActivity ?: return@LaunchedEffect
+        WindowCompat.getInsetsController(activity.window, view).apply {
+            isAppearanceLightStatusBars = !colors.isDark
+            isAppearanceLightNavigationBars = !colors.isDark
+        }
     }
 }
 

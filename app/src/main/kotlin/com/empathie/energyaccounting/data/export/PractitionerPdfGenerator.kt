@@ -10,17 +10,14 @@ import java.time.LocalDate
 import java.util.Locale
 
 /**
- * Renders a printable A4 report shaped after Maja Toudal's *Daily Energy Account Form*:
- * one block per day with one row per entry, then the period summary and both Insights
- * breakdowns.
+ * Renders a printable A4 report shaped after Maja Toudal's *Daily Energy Account Form*.
  *
- * Emits a plain PDF 1.4 document directly (Helvetica text), so it needs no Context, no
- * third-party library and no Android graphics runtime. `android.graphics.pdf.PdfDocument`
- * was the original plan, but it requires a native PDF backend that unit tests on the JVM
- * do not have, which made the mandated test impossible.
+ * The date range's entries are drawn as a bordered four-column table (header shading,
+ * cell borders, wrapped cells, daily subtotal rows); the period summary and the
+ * dimension / time-slot breakdowns follow as formatted sections.
  *
- * The report copy is intentionally English clinical wording so it can be handed to a
- * practitioner regardless of the app's UI language.
+ * Emits a plain PDF 1.4 document directly (Helvetica text and vector lines), so it needs
+ * no Context, no third-party library and no Android graphics runtime.
  */
 class PractitionerPdfGenerator {
 
@@ -32,298 +29,399 @@ class PractitionerPdfGenerator {
         insights: PeriodInsights,
         labels: PdfLabels = PdfLabels.english,
     ) {
-        val lines = buildLines(startDate, endDate, accounts, insights, labels)
-        PdfTextDocument.write(outputStream, lines)
-    }
+        val report = PdfReportBuilder(labels)
 
-    private fun buildLines(
-        startDate: LocalDate,
-        endDate: LocalDate,
-        accounts: List<DailyAccount>,
-        insights: PeriodInsights,
-        labels: PdfLabels,
-    ): List<PdfLine> {
-        val lines = mutableListOf<PdfLine>()
+        report.title(labels.title)
+        report.paragraph(
+            "${labels.periodLabel}: ${EnergyFormatter.formatDate(startDate)} - " +
+                EnergyFormatter.formatDate(endDate)
+        )
+        report.spacer(8f)
 
-        fun add(text: String, style: PdfStyle = PdfStyle.BODY) {
-            wrap(text, maxChars = MAX_BODY_CHARS).forEach { lines += PdfLine(it, style) }
-        }
-
-        add(labels.title, PdfStyle.TITLE)
-        add("${labels.periodLabel}: ${EnergyFormatter.formatDate(startDate)} - ${EnergyFormatter.formatDate(endDate)}")
-        lines += PdfLine("")
-
+        report.tableHeader()
         accounts.forEach { account ->
-            add(EnergyFormatter.formatDate(account.date), PdfStyle.HEADING)
             TimeSlot.entries.forEach { timeSlot ->
                 val ledger = account.ledgerFor(timeSlot)
-                if (ledger.entries.isEmpty()) return@forEach
-                add(
-                    "${labels.timeSlotNames[timeSlot] ?: timeSlot.name}  " +
-                        "(${labels.net} ${EnergyFormatter.formatNetBalance(ledger.netBalance)})",
-                    PdfStyle.HEADING,
-                )
                 ledger.entries.forEach { entry ->
-                    val dimensions = buildString {
-                        append("1° ").append(entry.primaryDimension.name)
-                        if (entry.secondaryDimensions.isNotEmpty()) {
-                            append(" / 2° ")
-                            append(entry.secondaryDimensions.joinToString(", ") { it.name })
-                        }
-                    }
                     val note = entry.situationalNote?.let { " - $it" }.orEmpty()
-                    val value = EnergyFormatter.formatSignedValue(entry.direction, entry.energyValue)
-                    add("   $value   ${entry.activity}$note   [$dimensions]")
+                    report.tableRow(
+                        listOf(
+                            "${EnergyFormatter.formatDate(account.date)}\n" +
+                                (labels.timeSlotNames[timeSlot] ?: timeSlot.name),
+                            "${entry.activity}$note",
+                            labels.resolveDimensionName(entry.dimension),
+                            EnergyFormatter.formatSignedValue(entry.direction, entry.energyValue),
+                        )
+                    )
                 }
             }
-            add(
+            report.dailyTotalsRow(
                 "${labels.dailyTotals}: ${labels.gain} +${account.totalGain} | " +
                     "${labels.spend} -${account.totalSpend} | " +
-                    "${labels.net} ${EnergyFormatter.formatNetBalance(account.netBalance)}",
-                PdfStyle.HEADING,
+                    "${labels.net} ${EnergyFormatter.formatNetBalance(account.netBalance)}"
             )
-            lines += PdfLine("")
+        }
+        report.spacer(12f)
+
+        report.section(labels.periodSummary)
+        report.paragraph("${labels.daysLogged}: ${insights.activeDaysCount}")
+        report.paragraph("${labels.totalGain}: +${insights.totalGain}")
+        report.paragraph("${labels.totalSpend}: -${insights.totalSpend}")
+        report.paragraph("${labels.netBalance}: ${EnergyFormatter.formatNetBalance(insights.netBalance)}")
+        report.paragraph(
+            "${labels.averageDailyNet}: ${EnergyFormatter.formatNetBalance(insights.averageDailyNet)}"
+        )
+        report.spacer(6f)
+
+        report.section(labels.spendByPrimaryDimension)
+        val spendDimensions = insights.byDimension.filter { it.spend > 0 }
+        if (spendDimensions.isEmpty()) {
+            report.paragraph("-")
+        } else {
+            spendDimensions.forEach {
+                report.bullet(
+                    "${labels.resolveDimensionName(it.dimension)}: ${it.spend} " +
+                        "(${it.spendSharePercent}%)"
+                )
+            }
         }
 
-        add(labels.periodSummary, PdfStyle.HEADING)
-        add("${labels.daysLogged}: ${insights.activeDaysCount}")
-        add("${labels.totalGain}: +${insights.totalGain}")
-        add("${labels.totalSpend}: -${insights.totalSpend}")
-        add("${labels.netBalance}: ${EnergyFormatter.formatNetBalance(insights.netBalance)}")
-        add("${labels.averageDailyNet}: ${EnergyFormatter.formatNetBalance(insights.averageDailyNet)}")
-        lines += PdfLine("")
+        report.section(labels.gainByPrimaryDimension)
+        val gainDimensions = insights.byDimension.filter { it.gain > 0 }
+        if (gainDimensions.isEmpty()) {
+            report.paragraph("-")
+        } else {
+            gainDimensions.forEach {
+                report.bullet(
+                    "${labels.resolveDimensionName(it.dimension)}: ${it.gain} " +
+                        "(${it.gainSharePercent}%)"
+                )
+            }
+        }
 
-        add(labels.spendByPrimaryDimension, PdfStyle.HEADING)
-        insights.byDimension
-            .filter { it.primarySpend > 0 }
-            .forEach { add("   ${it.dimension.name}: ${it.primarySpend} (${it.primarySpendSharePercent}%)") }
-
-        add(labels.gainByPrimaryDimension, PdfStyle.HEADING)
-        insights.byDimension
-            .filter { it.primaryGain > 0 }
-            .forEach { add("   ${it.dimension.name}: ${it.primaryGain} (${it.primaryGainSharePercent}%)") }
-
-        add(labels.secondaryDimensionOccurrences, PdfStyle.HEADING)
-        insights.byDimension
-            .filter { it.secondaryOccurrenceCount > 0 }
-            .forEach { add("   ${it.dimension.name}: ${it.secondaryOccurrenceCount}") }
-
-        add(labels.byTimeSlot, PdfStyle.HEADING)
+        report.section(labels.byTimeSlot)
         insights.byTimeSlot.forEach {
-            add(
-                "   ${labels.timeSlotNames[it.timeSlot] ?: it.timeSlot.name}: " +
+            report.bullet(
+                "${labels.timeSlotNames[it.timeSlot] ?: it.timeSlot.name}: " +
                     "${labels.gain} +${it.totalGain} | ${labels.spend} -${it.totalSpend} | " +
                     "${labels.net} ${EnergyFormatter.formatNetBalance(it.netBalance)}"
             )
         }
 
-        return lines
+        report.write(outputStream)
+    }
+}
+
+/**
+ * Minimal A4 PDF 1.4 page builder: Helvetica text runs, filled rectangles and stroked
+ * table lines, with automatic pagination and footers.
+ */
+private class PdfReportBuilder(private val labels: PdfLabels) {
+
+    private val pages = mutableListOf<StringBuilder>()
+    private var y = 0f
+    private var current = StringBuilder()
+
+    init {
+        newPage()
     }
 
-    private fun wrap(text: String, maxChars: Int): List<String> {
-        if (text.isEmpty()) return listOf("")
-        val words = text.split(' ')
-        val result = mutableListOf<String>()
-        var current = StringBuilder()
+    fun title(text: String) {
+        ensureSpace(28f)
+        drawText(text, MARGIN_LEFT, y, size = 17f, bold = true)
+        y -= 26f
+        current.append("0 0 0 rg\n")
+    }
 
-        words.forEach { word ->
-            val candidateLength = if (current.isEmpty()) word.length else current.length + 1 + word.length
-            if (candidateLength <= maxChars) {
-                if (current.isNotEmpty()) current.append(' ')
-                current.append(word)
-            } else {
-                if (current.isNotEmpty()) result += current.toString()
-                current = StringBuilder(word)
-            }
+    fun section(title: String) {
+        ensureSpace(26f)
+        drawRect(MARGIN_LEFT, y - 18f, TABLE_WIDTH, 18f, gray = "0.93")
+        drawText(title, MARGIN_LEFT + 5f, y - 12.5f, size = 10f, bold = true)
+        y -= 26f
+    }
+
+    fun paragraph(text: String) {
+        val lines = wrapWords(text, MAX_CHARS)
+        ensureSpace(lines.size * LINE_HEIGHT + 4f)
+        lines.forEach { line ->
+            drawText(line, MARGIN_LEFT, y, size = 9f)
+            y -= LINE_HEIGHT
         }
-        if (current.isNotEmpty()) result += current.toString()
-        return result.ifEmpty { listOf("") }
     }
 
-    private enum class PdfStyle { TITLE, HEADING, BODY }
-
-    private companion object {
-        const val MAX_BODY_CHARS = 105
-    }
-    private data class PdfLine(
-        val text: String,
-        val style: PdfStyle = PdfStyle.BODY,
-    )
-
-    /**
-     * Minimal PDF 1.4 writer: A4 pages, Helvetica, absolute-positioned text runs.
-     */
-    private object PdfTextDocument {
-        private const val PAGE_WIDTH = 595
-        private const val PAGE_HEIGHT = 842
-        private const val MARGIN_LEFT = 40f
-        private const val MARGIN_TOP = 45f
-        private const val MARGIN_BOTTOM = 45f
-        private const val FOOTER_HEIGHT = 20f
-
-        private const val OBJECT_CATALOG = 1
-        private const val OBJECT_PAGES = 2
-        private const val OBJECT_FONT_REGULAR = 3
-        private const val OBJECT_FONT_BOLD = 4
-        private const val FIRST_PAGE_OBJECT = 5
-
-        fun write(out: OutputStream, lines: List<PdfLine>) {
-            val pages = paginate(lines)
-            val objects = buildObjects(pages)
-
-            val document = ByteArrayOutputStream()
-            document.write("%PDF-1.4\n".toByteArray(Charsets.ISO_8859_1))
-
-            val offsets = IntArray(objects.size)
-            objects.forEachIndexed { index, body ->
-                offsets[index] = document.size()
-                document.write("${index + 1} 0 obj\n".toByteArray(Charsets.ISO_8859_1))
-                document.write(body)
-                document.write("\nendobj\n".toByteArray(Charsets.ISO_8859_1))
-            }
-
-            val xrefOffset = document.size()
-            document.write("xref\n0 ${objects.size + 1}\n".toByteArray(Charsets.ISO_8859_1))
-            document.write("0000000000 65535 f \n".toByteArray(Charsets.ISO_8859_1))
-            offsets.forEach { offset ->
-                val entry = String.format(Locale.US, "%010d 00000 n \n", offset)
-                document.write(entry.toByteArray(Charsets.ISO_8859_1))
-            }
-            document.write(
-                (
-                    "trailer\n<< /Size ${objects.size + 1} /Root $OBJECT_CATALOG 0 R >>\n" +
-                        "startxref\n$xrefOffset\n%%EOF\n"
-                    ).toByteArray(Charsets.ISO_8859_1)
+    fun bullet(text: String) {
+        val lines = wrapWords(text, MAX_CHARS - 4)
+        ensureSpace(lines.size * LINE_HEIGHT + 3f)
+        lines.forEachIndexed { index, line ->
+            drawText(
+                if (index == 0) "- $line" else "  $line",
+                MARGIN_LEFT + 6f,
+                y,
+                size = 9f,
             )
+            y -= LINE_HEIGHT
+        }
+    }
 
-            document.writeTo(out)
-            out.flush()
+    fun spacer(height: Float) {
+        ensureSpace(height)
+        y -= height
+    }
+
+    fun tableHeader() {
+        ensureSpace(20f)
+        val top = y
+        drawRect(MARGIN_LEFT, top - HEADER_HEIGHT, TABLE_WIDTH, HEADER_HEIGHT, gray = "0.90")
+        var x = MARGIN_LEFT
+        val columnTitles = listOf(
+            labels.columnDateSlot,
+            labels.columnActivity,
+            labels.columnDimension,
+            labels.columnValue,
+        )
+        columnTitles.forEachIndexed { index, title ->
+            drawText(title, x + CELL_PADDING, top - 12.5f, size = 8f, bold = true)
+            x += COLUMN_WIDTHS[index]
+        }
+        drawTableBorders(top, HEADER_HEIGHT)
+        y -= HEADER_HEIGHT
+    }
+
+    fun tableRow(cells: List<String>) {
+        val cellLines = cells.mapIndexed { index, text ->
+            wrapWords(text, charsForWidth(COLUMN_WIDTHS[index]))
+        }
+        val lineCount = cellLines.maxOf { it.size }
+        val height = lineCount * CELL_LINE_HEIGHT + CELL_PADDING * 2
+        ensureSpace(height)
+        val top = y
+
+        var x = MARGIN_LEFT
+        cellLines.forEachIndexed { index, lines ->
+            lines.forEachIndexed { lineIndex, line ->
+                drawText(
+                    line,
+                    x + CELL_PADDING,
+                    top - CELL_PADDING - 7f - lineIndex * CELL_LINE_HEIGHT,
+                    size = 8f,
+                )
+            }
+            x += COLUMN_WIDTHS[index]
         }
 
-        private fun paginate(lines: List<PdfLine>): List<List<PdfLine>> {
-            val bottom = MARGIN_BOTTOM + FOOTER_HEIGHT
-            val usableHeight = PAGE_HEIGHT - MARGIN_TOP - bottom
-            val pages = mutableListOf<List<PdfLine>>()
-            var current = mutableListOf<PdfLine>()
-            var used = 0f
+        drawTableBorders(top, height)
+        y -= height
+    }
 
-            lines.forEach { line ->
-                val advance = advanceOf(line)
-                if (used + advance > usableHeight && current.isNotEmpty()) {
-                    pages += current
-                    current = mutableListOf()
-                    used = 0f
-                }
-                current += line
-                used += advance
-            }
-            if (current.isNotEmpty()) pages += current
-            return pages.ifEmpty { listOf(emptyList()) }
+    fun dailyTotalsRow(text: String) {
+        ensureSpace(18f)
+        val top = y
+        drawRect(MARGIN_LEFT, top - 17f, TABLE_WIDTH, 17f, gray = "0.95")
+        drawText(text, MARGIN_LEFT + CELL_PADDING, top - 11.5f, size = 8.5f, bold = true)
+        drawTableBorders(top, 17f)
+        y -= 17f
+    }
+
+    fun write(outputStream: OutputStream) {
+        if (current.isNotEmpty()) {
+            pages += current
+            current = StringBuilder()
         }
 
-        private fun buildObjects(pages: List<List<PdfLine>>): List<ByteArray> {
-            val objects = mutableListOf<ByteArray>()
+        document.write("%PDF-1.4\n".toByteArray(Charsets.ISO_8859_1))
 
-            objects += "<< /Type /Catalog /Pages $OBJECT_PAGES 0 R >>".bytes()
-            val kids = pages.indices.joinToString(" ") { "${FIRST_PAGE_OBJECT + it * 2} 0 R" }
-            objects += "<< /Type /Pages /Kids [$kids] /Count ${pages.size} >>".bytes()
-            objects += (
-                "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
-                ).bytes()
-            objects += (
-                "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"
-                ).bytes()
-
-            pages.forEachIndexed { index, pageLines ->
-                val pageObjectNumber = FIRST_PAGE_OBJECT + index * 2
-                val contentObjectNumber = pageObjectNumber + 1
-                val content = renderContent(pageLines, index, pages.size)
-                val contentBytes = content.toByteArray(Charsets.ISO_8859_1)
-
-                objects += (
-                    "<< /Type /Page /Parent $OBJECT_PAGES 0 R " +
-                        "/MediaBox [0 0 $PAGE_WIDTH $PAGE_HEIGHT] " +
-                        "/Resources << /Font << /F1 $OBJECT_FONT_REGULAR 0 R /F2 $OBJECT_FONT_BOLD 0 R >> >> " +
-                        "/Contents $contentObjectNumber 0 R >>"
-                    ).bytes()
-
-                val streamHeader = "<< /Length ${contentBytes.size} >>\nstream\n"
-                objects += streamHeader.toByteArray(Charsets.ISO_8859_1) +
-                    contentBytes +
-                    "\nendstream".toByteArray(Charsets.ISO_8859_1)
-            }
-
-            return objects
-        }
-
-        private fun renderContent(lines: List<PdfLine>, pageIndex: Int, pageCount: Int): String {
-            val builder = StringBuilder()
-            var y = PAGE_HEIGHT - MARGIN_TOP
-
-            lines.forEach { line ->
-                val font = if (line.style == PdfStyle.BODY) "F1" else "F2"
-                val size = when (line.style) {
-                    PdfStyle.TITLE -> 16f
-                    PdfStyle.HEADING -> 9.5f
-                    PdfStyle.BODY -> 9f
-                }
-                if (line.text.isNotEmpty()) {
-                    builder.append("BT\n")
-                    builder.append("/$font $size Tf\n")
-                    builder.append(
-                        String.format(
-                            Locale.US,
-                            "1 0 0 1 %.2f %.2f Tm\n",
-                            MARGIN_LEFT,
-                            y,
-                        )
-                    )
-                    builder.append("(${escape(line.text)}) Tj\n")
-                    builder.append("ET\n")
-                }
-                y -= advanceOf(line)
-            }
-
+        val pageContents = pages.mapIndexed { index, builder ->
             builder.append("BT\n/F1 8 Tf\n")
             builder.append(
                 String.format(
                     Locale.US,
                     "1 0 0 1 %.2f %.2f Tm\n",
-                    PAGE_WIDTH - 120f,
+                    PAGE_WIDTH - MARGIN_LEFT - 80f,
                     MARGIN_BOTTOM - 12f,
                 )
             )
-            builder.append("(Page ${pageIndex + 1} of $pageCount) Tj\nET\n")
-            return builder.toString()
+            builder.append("(Page ${index + 1} of ${pages.size}) Tj\nET\n")
+            builder.toString().toByteArray(Charsets.ISO_8859_1)
         }
 
-        private fun advanceOf(line: PdfLine): Float = when (line.style) {
-            PdfStyle.TITLE -> 26f
-            PdfStyle.HEADING -> 15f
-            PdfStyle.BODY -> 13f
+        val objects = buildObjects(pageContents)
+        val offsets = IntArray(objects.size)
+        objects.forEachIndexed { index, body ->
+            offsets[index] = document.size()
+            document.write("${index + 1} 0 obj\n".toByteArray(Charsets.ISO_8859_1))
+            document.write(body)
+            document.write("\nendobj\n".toByteArray(Charsets.ISO_8859_1))
         }
 
-        private fun escape(text: String): String = buildString {
-            text.forEach { character ->
-                when (character) {
-                    '\\' -> append("\\\\")
-                    '(' -> append("\\(")
-                    ')' -> append("\\)")
-                    '\n', '\r' -> append(' ')
-                    else -> when {
-                        character.code in 32..126 -> append(character)
-                        // WinAnsi high range: Italian accents (à è é ì ò ù) and the degree sign.
-                        character.code in 160..255 -> append(character)
-                        character == '—' || character == '–' -> append('-')
-                        character == '’' -> append('\'')
-                        character == '“' || character == '”' -> append('"')
-                        character == '…' -> append("...")
-                        else -> append('?')
-                    }
+        val xrefOffset = document.size()
+        document.write("xref\n0 ${objects.size + 1}\n".toByteArray(Charsets.ISO_8859_1))
+        document.write("0000000000 65535 f \n".toByteArray(Charsets.ISO_8859_1))
+        offsets.forEach { offset ->
+            document.write(
+                String.format(Locale.US, "%010d 00000 n \n", offset)
+                    .toByteArray(Charsets.ISO_8859_1)
+            )
+        }
+        document.write(
+            (
+                "trailer\n<< /Size ${objects.size + 1} /Root 1 0 R >>\n" +
+                    "startxref\n$xrefOffset\n%%EOF\n"
+                ).toByteArray(Charsets.ISO_8859_1)
+        )
+
+        document.writeTo(outputStream)
+        outputStream.flush()
+    }
+
+    // ---- internals ---------------------------------------------------------
+
+    private val document = ByteArrayOutputStream()
+
+    private fun newPage() {
+        if (current.isNotEmpty()) pages += current
+        current = StringBuilder()
+        current.append("0 0 0 rg\n")
+        y = PAGE_HEIGHT - MARGIN_TOP
+    }
+
+    private fun ensureSpace(height: Float) {
+        if (y - height < MARGIN_BOTTOM) newPage()
+    }
+
+    private fun drawText(text: String, x: Float, baseline: Float, size: Float, bold: Boolean = false) {
+        if (text.isEmpty()) return
+        val font = if (bold) "F2" else "F1"
+        current.append("BT\n")
+        current.append("/$font $size Tf\n")
+        current.append(
+            String.format(Locale.US, "1 0 0 1 %.2f %.2f Tm\n", x, baseline)
+        )
+        current.append("(${escape(text)}) Tj\n")
+        current.append("ET\n")
+    }
+
+    private fun drawRect(x: Float, bottom: Float, width: Float, height: Float, gray: String) {
+        current.append("$gray $gray $gray rg\n")
+        current.append(
+            String.format(Locale.US, "%.2f %.2f %.2f %.2f re\n", x, bottom, width, height)
+        )
+        current.append("f\n")
+        current.append("0 0 0 rg\n")
+    }
+
+    private fun drawTableBorders(top: Float, height: Float) {
+        val bottom = top - height
+        current.append("0.6 w\n")
+        current.append("0.68 0.68 0.68 RG\n")
+
+        current.append(String.format(Locale.US, "%.2f %.2f m %.2f %.2f l S\n", MARGIN_LEFT, top, MARGIN_LEFT + TABLE_WIDTH, top))
+        current.append(String.format(Locale.US, "%.2f %.2f m %.2f %.2f l S\n", MARGIN_LEFT, bottom, MARGIN_LEFT + TABLE_WIDTH, bottom))
+
+        var x = MARGIN_LEFT
+        current.append(String.format(Locale.US, "%.2f %.2f m %.2f %.2f l S\n", x, top, x, bottom))
+        COLUMN_WIDTHS.forEach { width ->
+            x += width
+            current.append(String.format(Locale.US, "%.2f %.2f m %.2f %.2f l S\n", x, top, x, bottom))
+        }
+
+        current.append("0 RG\n")
+    }
+
+    private fun charsForWidth(width: Float): Int =
+        ((width - CELL_PADDING * 2) / (FONT_SIZE * 0.5f)).toInt().coerceAtLeast(4)
+
+    private fun wrapWords(text: String, maxChars: Int): List<String> {
+        val result = mutableListOf<String>()
+        text.split('\n').forEach { paragraph ->
+            if (paragraph.isBlank()) {
+                result += ""
+                return@forEach
+            }
+            var currentLine = StringBuilder()
+            paragraph.split(' ').forEach { word ->
+                val candidate = if (currentLine.isEmpty()) word else "$currentLine $word"
+                if (candidate.length <= maxChars) {
+                    currentLine = StringBuilder(candidate)
+                } else {
+                    if (currentLine.isNotEmpty()) result += currentLine.toString()
+                    currentLine = StringBuilder(word)
+                }
+            }
+            if (currentLine.isNotEmpty()) result += currentLine.toString()
+        }
+        return result.ifEmpty { listOf("") }
+    }
+
+    private fun buildObjects(pageContents: List<ByteArray>): List<ByteArray> {
+        val objects = mutableListOf<ByteArray>()
+
+        objects += "<< /Type /Catalog /Pages 2 0 R >>".toByteArray(Charsets.ISO_8859_1)
+        val kids = pageContents.indices.joinToString(" ") { "${FIRST_PAGE_OBJECT + it * 2} 0 R" }
+        objects += "<< /Type /Pages /Kids [$kids] /Count ${pageContents.size} >>"
+            .toByteArray(Charsets.ISO_8859_1)
+        objects += (
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
+            ).toByteArray(Charsets.ISO_8859_1)
+        objects += (
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"
+            ).toByteArray(Charsets.ISO_8859_1)
+
+        pageContents.forEachIndexed { index, content ->
+            val pageObjectNumber = FIRST_PAGE_OBJECT + index * 2
+            val contentObjectNumber = pageObjectNumber + 1
+
+            objects += (
+                "<< /Type /Page /Parent 2 0 R " +
+                    "/MediaBox [0 0 $PAGE_WIDTH $PAGE_HEIGHT] " +
+                    "/Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> " +
+                    "/Contents $contentObjectNumber 0 R >>"
+                ).toByteArray(Charsets.ISO_8859_1)
+
+            val header = "<< /Length ${content.size} >>\nstream\n".toByteArray(Charsets.ISO_8859_1)
+            val footer = "\nendstream".toByteArray(Charsets.ISO_8859_1)
+            objects += header + content + footer
+        }
+
+        return objects
+    }
+
+    private fun escape(text: String): String = buildString {
+        text.forEach { character ->
+            when (character) {
+                '\\' -> append("\\\\")
+                '(' -> append("\\(")
+                ')' -> append("\\)")
+                '\n', '\r' -> append(' ')
+                else -> when {
+                    character.code in 32..126 -> append(character)
+                    // WinAnsi high range: Italian accents (à è é ì ò ù) and the degree sign.
+                    character.code in 160..255 -> append(character)
+                    character == '—' || character == '–' -> append('-')
+                    character == '’' -> append('\'')
+                    character == '“' || character == '”' -> append('"')
+                    character == '…' -> append("...")
+                    else -> append('?')
                 }
             }
         }
+    }
 
-        private fun String.bytes(): ByteArray = toByteArray(Charsets.ISO_8859_1)
+    private companion object {
+        const val PAGE_WIDTH = 595
+        const val PAGE_HEIGHT = 842
+        const val MARGIN_LEFT = 32f
+        const val MARGIN_TOP = 44f
+        const val MARGIN_BOTTOM = 40f
+        const val LINE_HEIGHT = 12f
+        const val CELL_LINE_HEIGHT = 10f
+        const val CELL_PADDING = 4f
+        const val HEADER_HEIGHT = 20f
+        const val FONT_SIZE = 8f
+        const val MAX_CHARS = 100
+
+        const val FIRST_PAGE_OBJECT = 5
+
+        val COLUMN_WIDTHS = listOf(92f, 250f, 86f, 103f)
+        val TABLE_WIDTH = COLUMN_WIDTHS.sum()
     }
 }

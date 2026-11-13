@@ -1,20 +1,21 @@
 package com.empathie.energyaccounting.ui.insights
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -46,20 +47,25 @@ import com.empathie.energyaccounting.ui.theme.LocalEmpathieColors
 fun InsightsScreen(viewModel: InsightsViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val insights by viewModel.insights.collectAsStateWithLifecycle()
-    val dimensions by viewModel.dimensions.collectAsStateWithLifecycle()
     val filteredEntries by viewModel.filteredEntries.collectAsStateWithLifecycle()
     val colors = LocalEmpathieColors.current
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { Spacer(Modifier.height(8.dp)) }
 
         item {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = state.period == InsightsPeriod.TODAY,
+                    onClick = { viewModel.selectPeriod(InsightsPeriod.TODAY) },
+                    label = { Text(stringResource(R.string.today_period)) },
+                )
                 FilterChip(
                     selected = state.period == InsightsPeriod.LAST_7_DAYS,
                     onClick = { viewModel.selectPeriod(InsightsPeriod.LAST_7_DAYS) },
@@ -70,12 +76,15 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
                     onClick = { viewModel.selectPeriod(InsightsPeriod.LAST_30_DAYS) },
                     label = { Text(stringResource(R.string.last_30_days)) },
                 )
-                FilterChip(
-                    selected = state.period == InsightsPeriod.CUSTOM,
-                    onClick = { viewModel.selectPeriod(InsightsPeriod.CUSTOM) },
-                    label = { Text(stringResource(R.string.custom_range)) },
-                )
             }
+        }
+
+        item {
+            FilterChip(
+                selected = state.period == InsightsPeriod.CUSTOM,
+                onClick = { viewModel.selectPeriod(InsightsPeriod.CUSTOM) },
+                label = { Text(stringResource(R.string.custom_range)) },
+            )
         }
 
         if (state.period == InsightsPeriod.CUSTOM) {
@@ -100,42 +109,39 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
         item { PeriodSummaryCard(insights) }
 
         item {
-            SectionCard(title = stringResource(R.string.spend_by_primary_dimension)) {
-                val spendDimensions = insights.byDimension.filter { it.primarySpend > 0 }
+            SectionCard(title = stringResource(R.string.spend_by_dimension)) {
+                val spendDimensions = insights.byDimension.filter { it.spend > 0 }
                 if (spendDimensions.isEmpty()) {
                     EmptyNote()
                 } else {
                     spendDimensions.forEach { summary ->
-                        DimensionBar(summary = summary, spend = true, color = colors.spend)
+                        DimensionBar(
+                            summary = summary,
+                            spend = true,
+                            color = colors.spend,
+                            selected = summary.dimension.id == state.selectedDimensionId,
+                            onClick = { viewModel.toggleDimensionFilter(summary.dimension.id) },
+                        )
                     }
                 }
             }
         }
 
         item {
-            SectionCard(title = stringResource(R.string.gain_by_primary_dimension)) {
-                val gainDimensions = insights.byDimension.filter { it.primaryGain > 0 }
+            SectionCard(title = stringResource(R.string.gain_by_dimension)) {
+                val gainDimensions = insights.byDimension.filter { it.gain > 0 }
                 if (gainDimensions.isEmpty()) {
                     EmptyNote()
                 } else {
                     gainDimensions.forEach { summary ->
-                        DimensionBar(summary = summary, spend = false, color = colors.gain)
+                        DimensionBar(
+                            summary = summary,
+                            spend = false,
+                            color = colors.gain,
+                            selected = summary.dimension.id == state.selectedDimensionId,
+                            onClick = { viewModel.toggleDimensionFilter(summary.dimension.id) },
+                        )
                     }
-                }
-            }
-        }
-
-        item {
-            SectionCard(title = stringResource(R.string.secondary_dimension_occurrences)) {
-                val secondary = insights.byDimension.filter { it.secondaryOccurrenceCount > 0 }
-                if (secondary.isEmpty()) {
-                    EmptyNote()
-                } else {
-                    SecondaryDimensionOccurrences(
-                        summaries = secondary,
-                        selectedDimensionId = state.selectedDimensionId,
-                        onToggle = viewModel::toggleDimensionFilter,
-                    )
                 }
             }
         }
@@ -155,7 +161,7 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
                                         Text(
                                             text = "${EnergyFormatter.formatDate(entry.date)} · " +
                                                 timeSlotLabel(context, entry.timeSlot) + " · " +
-                                                dimensionLabel(context, entry.primaryDimension),
+                                                dimensionLabel(context, entry.dimension),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = colors.onSurfaceMuted,
                                         )
@@ -278,18 +284,32 @@ private fun EmptyNote() {
 }
 
 @Composable
-private fun DimensionBar(summary: DimensionImpactSummary, spend: Boolean, color: Color) {
+private fun DimensionBar(
+    summary: DimensionImpactSummary,
+    spend: Boolean,
+    color: Color,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
     val context = LocalContext.current
-    val value = if (spend) summary.primarySpend else summary.primaryGain
-    val share = if (spend) summary.primarySpendSharePercent else summary.primaryGainSharePercent
+    val value = if (spend) summary.spend else summary.gain
+    val share = if (spend) summary.spendSharePercent else summary.gainSharePercent
     val label = dimensionLabel(context, summary.dimension)
     val track = LocalEmpathieColors.current.surfaceSunken
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(6.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 2.dp),
+    ) {
         Row {
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                 modifier = Modifier.weight(1f),
             )
             Text(
@@ -316,27 +336,6 @@ private fun DimensionBar(summary: DimensionImpactSummary, spend: Boolean, color:
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun SecondaryDimensionOccurrences(
-    summaries: List<DimensionImpactSummary>,
-    selectedDimensionId: Long?,
-    onToggle: (Long) -> Unit,
-) {
-    val context = LocalContext.current
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        summaries.forEach { summary ->
-            FilterChip(
-                selected = summary.dimension.id == selectedDimensionId,
-                onClick = { onToggle(summary.dimension.id) },
-                label = {
-                    Text("${dimensionLabel(context, summary.dimension)} · ${summary.secondaryOccurrenceCount}")
-                },
-            )
-        }
-    }
-}
-
 @Composable
 private fun TimeSlotRow(summary: TimeSlotImpactSummary) {
     val context = LocalContext.current
@@ -349,7 +348,8 @@ private fun TimeSlotRow(summary: TimeSlotImpactSummary) {
         )
         Text(
             text = "+${summary.totalGain} / -${summary.totalSpend}  ·  " +
-                EnergyFormatter.formatNetBalance(summary.netBalance),
+                EnergyFormatter.formatNetBalance(summary.netBalance) + "  ·  " +
+                EnergyFormatter.formatNetBalance(summary.averageNetPerActiveDay) + "/day",
             style = MaterialTheme.typography.labelSmall,
             color = colors.onSurfaceMuted,
         )

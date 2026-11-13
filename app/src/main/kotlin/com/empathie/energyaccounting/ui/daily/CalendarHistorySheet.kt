@@ -1,6 +1,7 @@
 package com.empathie.energyaccounting.ui.daily
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +46,7 @@ import java.util.Locale
 @Composable
 internal fun CalendarHistorySheet(
     month: YearMonth,
+    selectedDate: LocalDate,
     netBalances: Map<LocalDate, Int>,
     onMonthChange: (Long) -> Unit,
     onSelectDate: (LocalDate) -> Unit,
@@ -51,8 +54,9 @@ internal fun CalendarHistorySheet(
 ) {
     val colors = LocalEmpathieColors.current
     val locale = Locale.getDefault()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -68,7 +72,10 @@ internal fun CalendarHistorySheet(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { onMonthChange(-1) }) {
-                    Icon(Icons.Filled.ChevronLeft, contentDescription = null)
+                    Icon(
+                        Icons.Filled.ChevronLeft,
+                        contentDescription = stringResource(R.string.previous_month),
+                    )
                 }
                 Text(
                     text = month.format(DateTimeFormatter.ofPattern("LLLL yyyy", locale)),
@@ -77,7 +84,10 @@ internal fun CalendarHistorySheet(
                     textAlign = TextAlign.Center,
                 )
                 IconButton(onClick = { onMonthChange(1) }) {
-                    Icon(Icons.Filled.ChevronRight, contentDescription = null)
+                    Icon(
+                        Icons.Filled.ChevronRight,
+                        contentDescription = stringResource(R.string.next_month),
+                    )
                 }
             }
 
@@ -118,27 +128,62 @@ internal fun CalendarHistorySheet(
                                     net < 0 -> colors.spend
                                     else -> colors.net
                                 }
+                                val isSelected = date == selectedDate
+                                val isToday = date == today
+
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(10.dp))
                                         .clickable { onSelectDate(date) }
-                                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                                        .padding(horizontal = 4.dp, vertical = 2.dp),
                                 ) {
-                                    Text(
-                                        text = date.dayOfMonth.toString(),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (date == today) FontWeight.Bold else FontWeight.Normal,
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                            .then(
+                                                when {
+                                                    isSelected -> Modifier.background(
+                                                        MaterialTheme.colorScheme.primary
+                                                    )
+
+                                                    isToday -> Modifier.border(
+                                                        1.5.dp,
+                                                        MaterialTheme.colorScheme.primary,
+                                                        CircleShape,
+                                                    )
+
+                                                    else -> Modifier
+                                                }
+                                            ),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text(
+                                            text = date.dayOfMonth.toString(),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = if (isSelected || isToday) {
+                                                FontWeight.Bold
+                                            } else {
+                                                FontWeight.Normal
+                                            },
+                                            color = when {
+                                                isSelected -> MaterialTheme.colorScheme.onPrimary
+                                                isToday -> MaterialTheme.colorScheme.primary
+                                                else -> MaterialTheme.colorScheme.onSurface
+                                            },
+                                        )
+                                    }
                                     if (dotColor != null) {
                                         Box(
                                             modifier = Modifier
+                                                .padding(top = 2.dp)
                                                 .size(5.dp)
                                                 .clip(CircleShape)
                                                 .background(dotColor),
                                         )
                                     } else {
-                                        Spacer(Modifier.height(5.dp))
+                                        Spacer(Modifier.height(7.dp))
                                     }
                                 }
                             }

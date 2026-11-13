@@ -5,27 +5,29 @@ import java.time.LocalDate
 /**
  * One [EnergyDimension]'s contribution to a [PeriodInsights] report.
  *
- * [primarySpend] / [primaryGain] carry 100% of each entry's energy value, so they sum
- * to the period totals. [secondaryOccurrenceCount] counts entries that tagged this
- * dimension as secondary and never contributes to the totals.
+ * [spend] / [gain] carry 100% of each entry's energy value, so they sum to the period
+ * totals.
  */
 data class DimensionImpactSummary(
     val dimension: EnergyDimension,
-    val primarySpend: Int,
-    val primarySpendSharePercent: Int,
-    val primaryGain: Int,
-    val primaryGainSharePercent: Int,
-    val secondaryOccurrenceCount: Int,
+    val spend: Int,
+    val spendSharePercent: Int,
+    val gain: Int,
+    val gainSharePercent: Int,
 )
 
 /**
  * One [TimeSlot]'s gain, spend and net balance across a period.
+ *
+ * [averageNetPerActiveDay] divides [netBalance] by the number of distinct days on which
+ * this slot has entries, and is `0` when the slot has none.
  */
 data class TimeSlotImpactSummary(
     val timeSlot: TimeSlot,
     val totalGain: Int,
     val totalSpend: Int,
     val netBalance: Int,
+    val averageNetPerActiveDay: Int,
 )
 
 /**
