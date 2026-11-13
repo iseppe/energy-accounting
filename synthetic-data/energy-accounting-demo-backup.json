@@ -1,0 +1,2354 @@
+{
+  "schemaVersion": 2,
+  "dimensions": [
+    {
+      "id": 1,
+      "systemKey": "PHYSICAL",
+      "name": "Physical",
+      "colorIndex": 0,
+      "isArchived": false
+    },
+    {
+      "id": 2,
+      "systemKey": "COGNITIVE",
+      "name": "Cognitive",
+      "colorIndex": 1,
+      "isArchived": false
+    },
+    {
+      "id": 3,
+      "systemKey": "SENSORY",
+      "name": "Sensory",
+      "colorIndex": 2,
+      "isArchived": false
+    },
+    {
+      "id": 4,
+      "systemKey": "SOCIAL",
+      "name": "Social",
+      "colorIndex": 3,
+      "isArchived": false
+    },
+    {
+      "id": 5,
+      "systemKey": "EMOTIONAL",
+      "name": "Emotional",
+      "colorIndex": 4,
+      "isArchived": false
+    },
+    {
+      "id": 6,
+      "systemKey": null,
+      "name": "Executive Function",
+      "colorIndex": 5,
+      "isArchived": false
+    },
+    {
+      "id": 7,
+      "systemKey": null,
+      "name": "Interoception",
+      "colorIndex": 6,
+      "isArchived": false
+    }
+  ],
+  "templates": [
+    {
+      "normalizedName": "morning routine",
+      "displayName": "Morning routine",
+      "defaultDirection": "SPEND",
+      "defaultEnergyValue": 30,
+      "defaultDimensionId": 2,
+      "isPinned": true,
+      "usageCount": 9,
+      "lastUsedEpochMillis": 1794553620000
+    },
+    {
+      "normalizedName": "favourite breakfast",
+      "displayName": "Favourite breakfast",
+      "defaultDirection": "GAIN",
+      "defaultEnergyValue": 20,
+      "defaultDimensionId": 3,
+      "isPinned": true,
+      "usageCount": 15,
+      "lastUsedEpochMillis": 1794554040000
+    },
+    {
+      "normalizedName": "commute to work",
+      "displayName": "Commute to work",
+      "defaultDirection": "SPEND",
+      "defaultEnergyValue": 40,
+      "defaultDimensionId": 3,
+      "isPinned": true,
+      "usageCount": 7,
+      "lastUsedEpochMillis": 1794295260000
+    },
+    {
+      "normalizedName": "team meeting",
+      "displayName": "Team meeting",
+      "defaultDirection": "SPEND",
+      "defaultEnergyValue": 60,
+      "defaultDimensionId": 4,
+      "isPinned": false,
+      "usageCount": 5,
+      "lastUsedEpochMillis": 1794568020000
+    },
+    {
+      "normalizedName": "focus block",
+      "displayName": "Focus block",
+      "defaultDirection": "SPEND",
+      "defaultEnergyValue": 50,
+      "defaultDimensionId": 2,
+      "isPinned": false,
+      "usageCount": 12,
+      "lastUsedEpochMillis": 1794567600000
+    },
+    {
+      "normalizedName": "lunch break",
+      "displayName": "Lunch break",
+      "defaultDirection": "GAIN",
+      "defaultEnergyValue": 30,
+      "defaultDimensionId": 3,
+      "isPinned": false,
+      "usageCount": 19,
+      "lastUsedEpochMillis": 1794582000000
+    },
+    {
+      "normalizedName": "grocery store",
+      "displayName": "Grocery store",
+      "defaultDirection": "SPEND",
+      "defaultEnergyValue": 60,
+      "defaultDimensionId": 3,
+      "isPinned": false,
+      "usageCount": 7,
+      "lastUsedEpochMillis": 1794481620000
+    },
+    {
+      "normalizedName": "quiet time with headphones",
+      "displayName": "Quiet time with headphones",
+      "defaultDirection": "GAIN",
+      "defaultEnergyValue": 50,
+      "defaultDimensionId": 3,
+      "isPinned": true,
+      "usageCount": 19,
+      "lastUsedEpochMillis": 1794582420000
+    },
+    {
+      "normalizedName": "evening walk",
+      "displayName": "Evening walk",
+      "defaultDirection": "GAIN",
+      "defaultEnergyValue": 30,
+      "defaultDimensionId": 1,
+      "isPinned": false,
+      "usageCount": 8,
+      "lastUsedEpochMillis": 1794600420000
+    },
+    {
+      "normalizedName": "dinner with family",
+      "displayName": "Dinner with family",
+      "defaultDirection": "SPEND",
+      "defaultEnergyValue": 20,
+      "defaultDimensionId": 4,
+      "isPinned": false,
+      "usageCount": 22,
+      "lastUsedEpochMillis": 1794600000000
+    },
+    {
+      "normalizedName": "bedtime routine",
+      "displayName": "Bedtime routine",
+      "defaultDirection": "SPEND",
+      "defaultEnergyValue": 15,
+      "defaultDimensionId": 2,
+      "isPinned": false,
+      "usageCount": 11,
+      "lastUsedEpochMillis": 1794600840000
+    },
+    {
+      "normalizedName": "call a friend",
+      "displayName": "Call a friend",
+      "defaultDirection": "GAIN",
+      "defaultEnergyValue": 35,
+      "defaultDimensionId": 4,
+      "isPinned": false,
+      "usageCount": 5,
+      "lastUsedEpochMillis": 1794668400000
+    },
+    {
+      "normalizedName": "paperwork",
+      "displayName": "Paperwork",
+      "defaultDirection": "SPEND",
+      "defaultEnergyValue": 45,
+      "defaultDimensionId": 6,
+      "isPinned": false,
+      "usageCount": 5,
+      "lastUsedEpochMillis": 1794639600000
+    },
+    {
+      "normalizedName": "interoception check-in",
+      "displayName": "Interoception check-in",
+      "defaultDirection": "GAIN",
+      "defaultEnergyValue": 15,
+      "defaultDimensionId": 7,
+      "isPinned": true,
+      "usageCount": 4,
+      "lastUsedEpochMillis": 1794381240000
+    }
+  ],
+  "entries": [
+    {
+      "dateIso": "2026-10-15",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": "Slept badly",
+      "direction": "SPEND",
+      "energyValue": 25,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792047600000
+    },
+    {
+      "dateIso": "2026-10-15",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Morning routine",
+      "situationalNote": "Rushed morning",
+      "direction": "SPEND",
+      "energyValue": 30,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792048020000
+    },
+    {
+      "dateIso": "2026-10-15",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Favourite breakfast",
+      "situationalNote": "Caffè e marmellata",
+      "direction": "GAIN",
+      "energyValue": 10,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792048440000
+    },
+    {
+      "dateIso": "2026-10-15",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Commute to work",
+      "situationalNote": "Crowded bus",
+      "direction": "SPEND",
+      "energyValue": 40,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792048860000
+    },
+    {
+      "dateIso": "2026-10-15",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Focus block",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 40,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792062000000
+    },
+    {
+      "dateIso": "2026-10-15",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Team meeting",
+      "situationalNote": "Loud room",
+      "direction": "SPEND",
+      "energyValue": 60,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1792062420000
+    },
+    {
+      "dateIso": "2026-10-15",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792076400000
+    },
+    {
+      "dateIso": "2026-10-15",
+      "timeSlot": "AFTERNOON",
+      "activity": "Quiet time with headphones",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 50,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792076820000
+    },
+    {
+      "dateIso": "2026-10-15",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": "Everyone talking",
+      "direction": "SPEND",
+      "energyValue": 30,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1792094400000
+    },
+    {
+      "dateIso": "2026-10-15",
+      "timeSlot": "EVENING",
+      "activity": "Bedtime routine",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 15,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792094820000
+    },
+    {
+      "dateIso": "2026-10-15",
+      "timeSlot": "EVENING",
+      "activity": "Quiet time with headphones",
+      "situationalNote": "Noise-cancelling",
+      "direction": "GAIN",
+      "energyValue": 50,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792095240000
+    },
+    {
+      "dateIso": "2026-10-16",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 5,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792134000000
+    },
+    {
+      "dateIso": "2026-10-16",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Favourite breakfast",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792134420000
+    },
+    {
+      "dateIso": "2026-10-16",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Interoception check-in",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 15,
+      "dimensionId": 7,
+      "createdAtEpochMillis": 1792134840000
+    },
+    {
+      "dateIso": "2026-10-16",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Focus block",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 50,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792148400000
+    },
+    {
+      "dateIso": "2026-10-16",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Paperwork",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 35,
+      "dimensionId": 6,
+      "createdAtEpochMillis": 1792148820000
+    },
+    {
+      "dateIso": "2026-10-16",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 35,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792162800000
+    },
+    {
+      "dateIso": "2026-10-16",
+      "timeSlot": "AFTERNOON",
+      "activity": "Evening walk",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 1,
+      "createdAtEpochMillis": 1792163220000
+    },
+    {
+      "dateIso": "2026-10-16",
+      "timeSlot": "EVENING",
+      "activity": "Creative writing",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 35,
+      "dimensionId": 5,
+      "createdAtEpochMillis": 1792180800000
+    },
+    {
+      "dateIso": "2026-10-16",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": "Loud table",
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1792181220000
+    },
+    {
+      "dateIso": "2026-10-16",
+      "timeSlot": "EVENING",
+      "activity": "Meditation",
+      "situationalNote": "Ten minutes",
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 5,
+      "createdAtEpochMillis": 1792181640000
+    },
+    {
+      "dateIso": "2026-10-19",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 10,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792393200000
+    },
+    {
+      "dateIso": "2026-10-19",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Morning routine",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 30,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792393620000
+    },
+    {
+      "dateIso": "2026-10-19",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Call a friend",
+      "situationalNote": "Laughed a lot",
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1792407600000
+    },
+    {
+      "dateIso": "2026-10-19",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Grocery store",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 50,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792408020000
+    },
+    {
+      "dateIso": "2026-10-19",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 40,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792422000000
+    },
+    {
+      "dateIso": "2026-10-19",
+      "timeSlot": "AFTERNOON",
+      "activity": "Doctor appointment",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 40,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1792422420000
+    },
+    {
+      "dateIso": "2026-10-19",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 15,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1792440000000
+    },
+    {
+      "dateIso": "2026-10-19",
+      "timeSlot": "EVENING",
+      "activity": "Unexpected phone call",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1792440420000
+    },
+    {
+      "dateIso": "2026-10-19",
+      "timeSlot": "EVENING",
+      "activity": "Quiet time with headphones",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 50,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792440840000
+    },
+    {
+      "dateIso": "2026-10-20",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": "Slept badly",
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792479600000
+    },
+    {
+      "dateIso": "2026-10-20",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Favourite breakfast",
+      "situationalNote": "Caffè e marmellata",
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792480020000
+    },
+    {
+      "dateIso": "2026-10-20",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Sunlight break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792494000000
+    },
+    {
+      "dateIso": "2026-10-20",
+      "timeSlot": "AFTERNOON",
+      "activity": "Sensory overload",
+      "situationalNote": "Bright lights",
+      "direction": "SPEND",
+      "energyValue": 80,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792508400000
+    },
+    {
+      "dateIso": "2026-10-20",
+      "timeSlot": "AFTERNOON",
+      "activity": "Deep pressure break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 50,
+      "dimensionId": 1,
+      "createdAtEpochMillis": 1792508820000
+    },
+    {
+      "dateIso": "2026-10-20",
+      "timeSlot": "AFTERNOON",
+      "activity": "Quiet time with headphones",
+      "situationalNote": "Favourite playlist",
+      "direction": "GAIN",
+      "energyValue": 55,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792509240000
+    },
+    {
+      "dateIso": "2026-10-20",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 15,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1792526400000
+    },
+    {
+      "dateIso": "2026-10-20",
+      "timeSlot": "EVENING",
+      "activity": "Bedtime routine",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 15,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792526820000
+    },
+    {
+      "dateIso": "2026-10-22",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": "Slept badly",
+      "direction": "SPEND",
+      "energyValue": 15,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792652400000
+    },
+    {
+      "dateIso": "2026-10-22",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "School drop-off",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 35,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792652820000
+    },
+    {
+      "dateIso": "2026-10-22",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Commute to work",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 40,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792653240000
+    },
+    {
+      "dateIso": "2026-10-22",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Focus block",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 50,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792666800000
+    },
+    {
+      "dateIso": "2026-10-22",
+      "timeSlot": "AFTERNOON",
+      "activity": "Homework support",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 40,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792681200000
+    },
+    {
+      "dateIso": "2026-10-22",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 20,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792681620000
+    },
+    {
+      "dateIso": "2026-10-22",
+      "timeSlot": "AFTERNOON",
+      "activity": "Sensory overload",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 80,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792682040000
+    },
+    {
+      "dateIso": "2026-10-22",
+      "timeSlot": "AFTERNOON",
+      "activity": "Deep pressure break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 35,
+      "dimensionId": 1,
+      "createdAtEpochMillis": 1792682460000
+    },
+    {
+      "dateIso": "2026-10-22",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 15,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1792699200000
+    },
+    {
+      "dateIso": "2026-10-22",
+      "timeSlot": "EVENING",
+      "activity": "Bedtime story",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 10,
+      "dimensionId": 5,
+      "createdAtEpochMillis": 1792699620000
+    },
+    {
+      "dateIso": "2026-10-23",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 5,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792738800000
+    },
+    {
+      "dateIso": "2026-10-23",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Favourite breakfast",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 15,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792739220000
+    },
+    {
+      "dateIso": "2026-10-23",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Grocery store",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 55,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792753200000
+    },
+    {
+      "dateIso": "2026-10-23",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": "Ate outside",
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792767600000
+    },
+    {
+      "dateIso": "2026-10-23",
+      "timeSlot": "AFTERNOON",
+      "activity": "Evening walk",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 20,
+      "dimensionId": 1,
+      "createdAtEpochMillis": 1792768020000
+    },
+    {
+      "dateIso": "2026-10-23",
+      "timeSlot": "EVENING",
+      "activity": "Creative writing",
+      "situationalNote": "Flow state",
+      "direction": "GAIN",
+      "energyValue": 40,
+      "dimensionId": 5,
+      "createdAtEpochMillis": 1792785600000
+    },
+    {
+      "dateIso": "2026-10-23",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": "Loud table",
+      "direction": "SPEND",
+      "energyValue": 30,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1792786020000
+    },
+    {
+      "dateIso": "2026-10-23",
+      "timeSlot": "EVENING",
+      "activity": "Quiet time with headphones",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 60,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792786440000
+    },
+    {
+      "dateIso": "2026-10-23",
+      "timeSlot": "EVENING",
+      "activity": "Bedtime routine",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792786860000
+    },
+    {
+      "dateIso": "2026-10-24",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 15,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792825200000
+    },
+    {
+      "dateIso": "2026-10-24",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Morning routine",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 30,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792825620000
+    },
+    {
+      "dateIso": "2026-10-24",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Favourite breakfast",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 20,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792826040000
+    },
+    {
+      "dateIso": "2026-10-24",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Commute to work",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 30,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792826460000
+    },
+    {
+      "dateIso": "2026-10-24",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Focus block",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 50,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792839600000
+    },
+    {
+      "dateIso": "2026-10-24",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Team meeting",
+      "situationalNote": "Unexpected agenda change",
+      "direction": "SPEND",
+      "energyValue": 60,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1792840020000
+    },
+    {
+      "dateIso": "2026-10-24",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": "Ate outside",
+      "direction": "GAIN",
+      "energyValue": 35,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792854000000
+    },
+    {
+      "dateIso": "2026-10-24",
+      "timeSlot": "AFTERNOON",
+      "activity": "Quiet time with headphones",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 50,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792854420000
+    },
+    {
+      "dateIso": "2026-10-24",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 15,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1792872000000
+    },
+    {
+      "dateIso": "2026-10-24",
+      "timeSlot": "EVENING",
+      "activity": "Bedtime routine",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1792872420000
+    },
+    {
+      "dateIso": "2026-10-24",
+      "timeSlot": "EVENING",
+      "activity": "Quiet time with headphones",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 50,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1792872840000
+    },
+    {
+      "dateIso": "2026-10-27",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 5,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793084400000
+    },
+    {
+      "dateIso": "2026-10-27",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Favourite breakfast",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 15,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793084820000
+    },
+    {
+      "dateIso": "2026-10-27",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Interoception check-in",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 20,
+      "dimensionId": 7,
+      "createdAtEpochMillis": 1793085240000
+    },
+    {
+      "dateIso": "2026-10-27",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Focus block",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 40,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793098800000
+    },
+    {
+      "dateIso": "2026-10-27",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Paperwork",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 45,
+      "dimensionId": 6,
+      "createdAtEpochMillis": 1793099220000
+    },
+    {
+      "dateIso": "2026-10-27",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793113200000
+    },
+    {
+      "dateIso": "2026-10-27",
+      "timeSlot": "AFTERNOON",
+      "activity": "Evening walk",
+      "situationalNote": "Fresh air",
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 1,
+      "createdAtEpochMillis": 1793113620000
+    },
+    {
+      "dateIso": "2026-10-27",
+      "timeSlot": "EVENING",
+      "activity": "Creative writing",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 35,
+      "dimensionId": 5,
+      "createdAtEpochMillis": 1793131200000
+    },
+    {
+      "dateIso": "2026-10-27",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1793131620000
+    },
+    {
+      "dateIso": "2026-10-27",
+      "timeSlot": "EVENING",
+      "activity": "Meditation",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 25,
+      "dimensionId": 5,
+      "createdAtEpochMillis": 1793132040000
+    },
+    {
+      "dateIso": "2026-10-28",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793170800000
+    },
+    {
+      "dateIso": "2026-10-28",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Morning routine",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 30,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793171220000
+    },
+    {
+      "dateIso": "2026-10-28",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Call a friend",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1793185200000
+    },
+    {
+      "dateIso": "2026-10-28",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Grocery store",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 60,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793185620000
+    },
+    {
+      "dateIso": "2026-10-28",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 35,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793199600000
+    },
+    {
+      "dateIso": "2026-10-28",
+      "timeSlot": "AFTERNOON",
+      "activity": "Doctor appointment",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 60,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1793200020000
+    },
+    {
+      "dateIso": "2026-10-28",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1793217600000
+    },
+    {
+      "dateIso": "2026-10-28",
+      "timeSlot": "EVENING",
+      "activity": "Unexpected phone call",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 25,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1793218020000
+    },
+    {
+      "dateIso": "2026-10-28",
+      "timeSlot": "EVENING",
+      "activity": "Quiet time with headphones",
+      "situationalNote": "Favourite playlist",
+      "direction": "GAIN",
+      "energyValue": 50,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793218440000
+    },
+    {
+      "dateIso": "2026-10-29",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": "Slept badly",
+      "direction": "SPEND",
+      "energyValue": 25,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793257200000
+    },
+    {
+      "dateIso": "2026-10-29",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Favourite breakfast",
+      "situationalNote": "Caffè e marmellata",
+      "direction": "GAIN",
+      "energyValue": 25,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793257620000
+    },
+    {
+      "dateIso": "2026-10-29",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Sunlight break",
+      "situationalNote": "Five minutes outside",
+      "direction": "GAIN",
+      "energyValue": 20,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793271600000
+    },
+    {
+      "dateIso": "2026-10-29",
+      "timeSlot": "AFTERNOON",
+      "activity": "Sensory overload",
+      "situationalNote": "Bright lights",
+      "direction": "SPEND",
+      "energyValue": 80,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793286000000
+    },
+    {
+      "dateIso": "2026-10-29",
+      "timeSlot": "AFTERNOON",
+      "activity": "Deep pressure break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 40,
+      "dimensionId": 1,
+      "createdAtEpochMillis": 1793286420000
+    },
+    {
+      "dateIso": "2026-10-29",
+      "timeSlot": "AFTERNOON",
+      "activity": "Quiet time with headphones",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 50,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793286840000
+    },
+    {
+      "dateIso": "2026-10-29",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 10,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1793304000000
+    },
+    {
+      "dateIso": "2026-10-29",
+      "timeSlot": "EVENING",
+      "activity": "Bedtime routine",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 25,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793304420000
+    },
+    {
+      "dateIso": "2026-10-30",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 15,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793343600000
+    },
+    {
+      "dateIso": "2026-10-30",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "School drop-off",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 30,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793344020000
+    },
+    {
+      "dateIso": "2026-10-30",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Commute to work",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 50,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793344440000
+    },
+    {
+      "dateIso": "2026-10-30",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Focus block",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 40,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793358000000
+    },
+    {
+      "dateIso": "2026-10-30",
+      "timeSlot": "AFTERNOON",
+      "activity": "Homework support",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 50,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793372400000
+    },
+    {
+      "dateIso": "2026-10-30",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793372820000
+    },
+    {
+      "dateIso": "2026-10-30",
+      "timeSlot": "AFTERNOON",
+      "activity": "Sensory overload",
+      "situationalNote": "Bright lights",
+      "direction": "SPEND",
+      "energyValue": 80,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793373240000
+    },
+    {
+      "dateIso": "2026-10-30",
+      "timeSlot": "AFTERNOON",
+      "activity": "Deep pressure break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 35,
+      "dimensionId": 1,
+      "createdAtEpochMillis": 1793373660000
+    },
+    {
+      "dateIso": "2026-10-30",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 15,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1793390400000
+    },
+    {
+      "dateIso": "2026-10-30",
+      "timeSlot": "EVENING",
+      "activity": "Bedtime story",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 10,
+      "dimensionId": 5,
+      "createdAtEpochMillis": 1793390820000
+    },
+    {
+      "dateIso": "2026-11-01",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 15,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793516400000
+    },
+    {
+      "dateIso": "2026-11-01",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Favourite breakfast",
+      "situationalNote": "Warm tea and toast",
+      "direction": "GAIN",
+      "energyValue": 15,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793516820000
+    },
+    {
+      "dateIso": "2026-11-01",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Grocery store",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 50,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793530800000
+    },
+    {
+      "dateIso": "2026-11-01",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 20,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793545200000
+    },
+    {
+      "dateIso": "2026-11-01",
+      "timeSlot": "AFTERNOON",
+      "activity": "Evening walk",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 1,
+      "createdAtEpochMillis": 1793545620000
+    },
+    {
+      "dateIso": "2026-11-01",
+      "timeSlot": "EVENING",
+      "activity": "Creative writing",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 45,
+      "dimensionId": 5,
+      "createdAtEpochMillis": 1793563200000
+    },
+    {
+      "dateIso": "2026-11-01",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 15,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1793563620000
+    },
+    {
+      "dateIso": "2026-11-01",
+      "timeSlot": "EVENING",
+      "activity": "Quiet time with headphones",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 60,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793564040000
+    },
+    {
+      "dateIso": "2026-11-01",
+      "timeSlot": "EVENING",
+      "activity": "Bedtime routine",
+      "situationalNote": "Late shower",
+      "direction": "SPEND",
+      "energyValue": 25,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793564460000
+    },
+    {
+      "dateIso": "2026-11-03",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793689200000
+    },
+    {
+      "dateIso": "2026-11-03",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Morning routine",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 25,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793689620000
+    },
+    {
+      "dateIso": "2026-11-03",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Favourite breakfast",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 15,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793690040000
+    },
+    {
+      "dateIso": "2026-11-03",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Commute to work",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 40,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793690460000
+    },
+    {
+      "dateIso": "2026-11-03",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Focus block",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 45,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793703600000
+    },
+    {
+      "dateIso": "2026-11-03",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Team meeting",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 65,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1793704020000
+    },
+    {
+      "dateIso": "2026-11-03",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 35,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793718000000
+    },
+    {
+      "dateIso": "2026-11-03",
+      "timeSlot": "AFTERNOON",
+      "activity": "Quiet time with headphones",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 50,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793718420000
+    },
+    {
+      "dateIso": "2026-11-03",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 30,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1793736000000
+    },
+    {
+      "dateIso": "2026-11-03",
+      "timeSlot": "EVENING",
+      "activity": "Bedtime routine",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 25,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793736420000
+    },
+    {
+      "dateIso": "2026-11-03",
+      "timeSlot": "EVENING",
+      "activity": "Quiet time with headphones",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 50,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793736840000
+    },
+    {
+      "dateIso": "2026-11-04",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 10,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793775600000
+    },
+    {
+      "dateIso": "2026-11-04",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Favourite breakfast",
+      "situationalNote": "Caffè e marmellata",
+      "direction": "GAIN",
+      "energyValue": 20,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793776020000
+    },
+    {
+      "dateIso": "2026-11-04",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Interoception check-in",
+      "situationalNote": "Noticed tension early",
+      "direction": "GAIN",
+      "energyValue": 25,
+      "dimensionId": 7,
+      "createdAtEpochMillis": 1793776440000
+    },
+    {
+      "dateIso": "2026-11-04",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Focus block",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 50,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793790000000
+    },
+    {
+      "dateIso": "2026-11-04",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Paperwork",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 50,
+      "dimensionId": 6,
+      "createdAtEpochMillis": 1793790420000
+    },
+    {
+      "dateIso": "2026-11-04",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": "Quiet lunch",
+      "direction": "GAIN",
+      "energyValue": 20,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793804400000
+    },
+    {
+      "dateIso": "2026-11-04",
+      "timeSlot": "AFTERNOON",
+      "activity": "Evening walk",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 1,
+      "createdAtEpochMillis": 1793804820000
+    },
+    {
+      "dateIso": "2026-11-04",
+      "timeSlot": "EVENING",
+      "activity": "Creative writing",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 55,
+      "dimensionId": 5,
+      "createdAtEpochMillis": 1793822400000
+    },
+    {
+      "dateIso": "2026-11-04",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 30,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1793822820000
+    },
+    {
+      "dateIso": "2026-11-04",
+      "timeSlot": "EVENING",
+      "activity": "Meditation",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 5,
+      "createdAtEpochMillis": 1793823240000
+    },
+    {
+      "dateIso": "2026-11-05",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 25,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793862000000
+    },
+    {
+      "dateIso": "2026-11-05",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Morning routine",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 30,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793862420000
+    },
+    {
+      "dateIso": "2026-11-05",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Call a friend",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 35,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1793876400000
+    },
+    {
+      "dateIso": "2026-11-05",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Grocery store",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 55,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793876820000
+    },
+    {
+      "dateIso": "2026-11-05",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 35,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793890800000
+    },
+    {
+      "dateIso": "2026-11-05",
+      "timeSlot": "AFTERNOON",
+      "activity": "Doctor appointment",
+      "situationalNote": "New doctor",
+      "direction": "SPEND",
+      "energyValue": 40,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1793891220000
+    },
+    {
+      "dateIso": "2026-11-05",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1793908800000
+    },
+    {
+      "dateIso": "2026-11-05",
+      "timeSlot": "EVENING",
+      "activity": "Unexpected phone call",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1793909220000
+    },
+    {
+      "dateIso": "2026-11-05",
+      "timeSlot": "EVENING",
+      "activity": "Quiet time with headphones",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 50,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793909640000
+    },
+    {
+      "dateIso": "2026-11-06",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 25,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793948400000
+    },
+    {
+      "dateIso": "2026-11-06",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Favourite breakfast",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 15,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793948820000
+    },
+    {
+      "dateIso": "2026-11-06",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Sunlight break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 25,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793962800000
+    },
+    {
+      "dateIso": "2026-11-06",
+      "timeSlot": "AFTERNOON",
+      "activity": "Sensory overload",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 60,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793977200000
+    },
+    {
+      "dateIso": "2026-11-06",
+      "timeSlot": "AFTERNOON",
+      "activity": "Deep pressure break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 40,
+      "dimensionId": 1,
+      "createdAtEpochMillis": 1793977620000
+    },
+    {
+      "dateIso": "2026-11-06",
+      "timeSlot": "AFTERNOON",
+      "activity": "Quiet time with headphones",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 55,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1793978040000
+    },
+    {
+      "dateIso": "2026-11-06",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": "Everyone talking",
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1793995200000
+    },
+    {
+      "dateIso": "2026-11-06",
+      "timeSlot": "EVENING",
+      "activity": "Bedtime routine",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 25,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1793995620000
+    },
+    {
+      "dateIso": "2026-11-07",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 15,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794034800000
+    },
+    {
+      "dateIso": "2026-11-07",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "School drop-off",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 30,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794035220000
+    },
+    {
+      "dateIso": "2026-11-07",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Commute to work",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 40,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794035640000
+    },
+    {
+      "dateIso": "2026-11-07",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Focus block",
+      "situationalNote": "No interruptions",
+      "direction": "SPEND",
+      "energyValue": 50,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794049200000
+    },
+    {
+      "dateIso": "2026-11-07",
+      "timeSlot": "AFTERNOON",
+      "activity": "Homework support",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 40,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794063600000
+    },
+    {
+      "dateIso": "2026-11-07",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": "Quiet lunch",
+      "direction": "GAIN",
+      "energyValue": 40,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794064020000
+    },
+    {
+      "dateIso": "2026-11-07",
+      "timeSlot": "AFTERNOON",
+      "activity": "Sensory overload",
+      "situationalNote": "Too much noise",
+      "direction": "SPEND",
+      "energyValue": 70,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794064440000
+    },
+    {
+      "dateIso": "2026-11-07",
+      "timeSlot": "AFTERNOON",
+      "activity": "Deep pressure break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 50,
+      "dimensionId": 1,
+      "createdAtEpochMillis": 1794064860000
+    },
+    {
+      "dateIso": "2026-11-07",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": "Loud table",
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1794081600000
+    },
+    {
+      "dateIso": "2026-11-07",
+      "timeSlot": "EVENING",
+      "activity": "Bedtime story",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 25,
+      "dimensionId": 5,
+      "createdAtEpochMillis": 1794082020000
+    },
+    {
+      "dateIso": "2026-11-09",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": "Woke up before the alarm",
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794207600000
+    },
+    {
+      "dateIso": "2026-11-09",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Favourite breakfast",
+      "situationalNote": "Warm tea and toast",
+      "direction": "GAIN",
+      "energyValue": 10,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794208020000
+    },
+    {
+      "dateIso": "2026-11-09",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Grocery store",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 60,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794222000000
+    },
+    {
+      "dateIso": "2026-11-09",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794236400000
+    },
+    {
+      "dateIso": "2026-11-09",
+      "timeSlot": "AFTERNOON",
+      "activity": "Evening walk",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 25,
+      "dimensionId": 1,
+      "createdAtEpochMillis": 1794236820000
+    },
+    {
+      "dateIso": "2026-11-09",
+      "timeSlot": "EVENING",
+      "activity": "Creative writing",
+      "situationalNote": "Flow state",
+      "direction": "GAIN",
+      "energyValue": 45,
+      "dimensionId": 5,
+      "createdAtEpochMillis": 1794254400000
+    },
+    {
+      "dateIso": "2026-11-09",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": "Loud table",
+      "direction": "SPEND",
+      "energyValue": 30,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1794254820000
+    },
+    {
+      "dateIso": "2026-11-09",
+      "timeSlot": "EVENING",
+      "activity": "Quiet time with headphones",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 50,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794255240000
+    },
+    {
+      "dateIso": "2026-11-09",
+      "timeSlot": "EVENING",
+      "activity": "Bedtime routine",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 5,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794255660000
+    },
+    {
+      "dateIso": "2026-11-10",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": "Slept badly",
+      "direction": "SPEND",
+      "energyValue": 5,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794294000000
+    },
+    {
+      "dateIso": "2026-11-10",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Morning routine",
+      "situationalNote": "Change of plan",
+      "direction": "SPEND",
+      "energyValue": 40,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794294420000
+    },
+    {
+      "dateIso": "2026-11-10",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Favourite breakfast",
+      "situationalNote": "Caffè e marmellata",
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794294840000
+    },
+    {
+      "dateIso": "2026-11-10",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Commute to work",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 45,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794295260000
+    },
+    {
+      "dateIso": "2026-11-10",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Focus block",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 55,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794308400000
+    },
+    {
+      "dateIso": "2026-11-10",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Team meeting",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 60,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1794308820000
+    },
+    {
+      "dateIso": "2026-11-10",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 40,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794322800000
+    },
+    {
+      "dateIso": "2026-11-10",
+      "timeSlot": "AFTERNOON",
+      "activity": "Quiet time with headphones",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 40,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794323220000
+    },
+    {
+      "dateIso": "2026-11-10",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": "Everyone talking",
+      "direction": "SPEND",
+      "energyValue": 30,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1794340800000
+    },
+    {
+      "dateIso": "2026-11-10",
+      "timeSlot": "EVENING",
+      "activity": "Bedtime routine",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 25,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794341220000
+    },
+    {
+      "dateIso": "2026-11-10",
+      "timeSlot": "EVENING",
+      "activity": "Quiet time with headphones",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 45,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794341640000
+    },
+    {
+      "dateIso": "2026-11-11",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 5,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794380400000
+    },
+    {
+      "dateIso": "2026-11-11",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Favourite breakfast",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 10,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794380820000
+    },
+    {
+      "dateIso": "2026-11-11",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Interoception check-in",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 20,
+      "dimensionId": 7,
+      "createdAtEpochMillis": 1794381240000
+    },
+    {
+      "dateIso": "2026-11-11",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Focus block",
+      "situationalNote": "Deep work",
+      "direction": "SPEND",
+      "energyValue": 50,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794394800000
+    },
+    {
+      "dateIso": "2026-11-11",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Paperwork",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 35,
+      "dimensionId": 6,
+      "createdAtEpochMillis": 1794395220000
+    },
+    {
+      "dateIso": "2026-11-11",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 35,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794409200000
+    },
+    {
+      "dateIso": "2026-11-11",
+      "timeSlot": "AFTERNOON",
+      "activity": "Evening walk",
+      "situationalNote": "Cool air",
+      "direction": "GAIN",
+      "energyValue": 20,
+      "dimensionId": 1,
+      "createdAtEpochMillis": 1794409620000
+    },
+    {
+      "dateIso": "2026-11-11",
+      "timeSlot": "EVENING",
+      "activity": "Creative writing",
+      "situationalNote": "Wrote a chapter",
+      "direction": "GAIN",
+      "energyValue": 35,
+      "dimensionId": 5,
+      "createdAtEpochMillis": 1794427200000
+    },
+    {
+      "dateIso": "2026-11-11",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": "Everyone talking",
+      "direction": "SPEND",
+      "energyValue": 25,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1794427620000
+    },
+    {
+      "dateIso": "2026-11-11",
+      "timeSlot": "EVENING",
+      "activity": "Meditation",
+      "situationalNote": "Ten minutes",
+      "direction": "GAIN",
+      "energyValue": 25,
+      "dimensionId": 5,
+      "createdAtEpochMillis": 1794428040000
+    },
+    {
+      "dateIso": "2026-11-12",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 15,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794466800000
+    },
+    {
+      "dateIso": "2026-11-12",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Morning routine",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794467220000
+    },
+    {
+      "dateIso": "2026-11-12",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Call a friend",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1794481200000
+    },
+    {
+      "dateIso": "2026-11-12",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Grocery store",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 60,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794481620000
+    },
+    {
+      "dateIso": "2026-11-12",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794495600000
+    },
+    {
+      "dateIso": "2026-11-12",
+      "timeSlot": "AFTERNOON",
+      "activity": "Doctor appointment",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 60,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1794496020000
+    },
+    {
+      "dateIso": "2026-11-12",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1794513600000
+    },
+    {
+      "dateIso": "2026-11-12",
+      "timeSlot": "EVENING",
+      "activity": "Unexpected phone call",
+      "situationalNote": null,
+      "direction": "SPEND",
+      "energyValue": 30,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1794514020000
+    },
+    {
+      "dateIso": "2026-11-12",
+      "timeSlot": "EVENING",
+      "activity": "Quiet time with headphones",
+      "situationalNote": null,
+      "direction": "GAIN",
+      "energyValue": 45,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794514440000
+    },
+    {
+      "dateIso": "2026-11-13",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Wake up",
+      "situationalNote": "Slept badly",
+      "direction": "SPEND",
+      "energyValue": 15,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794553200000
+    },
+    {
+      "dateIso": "2026-11-13",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Morning routine",
+      "situationalNote": "Rushed morning",
+      "direction": "SPEND",
+      "energyValue": 30,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794553620000
+    },
+    {
+      "dateIso": "2026-11-13",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Favourite breakfast",
+      "situationalNote": "Caffè e marmellata",
+      "direction": "GAIN",
+      "energyValue": 20,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794554040000
+    },
+    {
+      "dateIso": "2026-11-13",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Focus block",
+      "situationalNote": "Deep work",
+      "direction": "SPEND",
+      "energyValue": 45,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794567600000
+    },
+    {
+      "dateIso": "2026-11-13",
+      "timeSlot": "LATE_MORNING",
+      "activity": "Team meeting",
+      "situationalNote": "Unexpected agenda change",
+      "direction": "SPEND",
+      "energyValue": 50,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1794568020000
+    },
+    {
+      "dateIso": "2026-11-13",
+      "timeSlot": "AFTERNOON",
+      "activity": "Lunch break",
+      "situationalNote": "Quiet lunch",
+      "direction": "GAIN",
+      "energyValue": 30,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794582000000
+    },
+    {
+      "dateIso": "2026-11-13",
+      "timeSlot": "AFTERNOON",
+      "activity": "Quiet time with headphones",
+      "situationalNote": "Dark room",
+      "direction": "GAIN",
+      "energyValue": 50,
+      "dimensionId": 3,
+      "createdAtEpochMillis": 1794582420000
+    },
+    {
+      "dateIso": "2026-11-13",
+      "timeSlot": "EVENING",
+      "activity": "Dinner with family",
+      "situationalNote": "Loud table",
+      "direction": "SPEND",
+      "energyValue": 20,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1794600000000
+    },
+    {
+      "dateIso": "2026-11-13",
+      "timeSlot": "EVENING",
+      "activity": "Evening walk",
+      "situationalNote": "Sunset",
+      "direction": "GAIN",
+      "energyValue": 40,
+      "dimensionId": 1,
+      "createdAtEpochMillis": 1794600420000
+    },
+    {
+      "dateIso": "2026-11-13",
+      "timeSlot": "EVENING",
+      "activity": "Bedtime routine",
+      "situationalNote": "Late shower",
+      "direction": "SPEND",
+      "energyValue": 15,
+      "dimensionId": 2,
+      "createdAtEpochMillis": 1794600840000
+    },
+    {
+      "dateIso": "2026-11-14",
+      "timeSlot": "EARLY_MORNING",
+      "activity": "Paperwork",
+      "situationalNote": "Deadline",
+      "direction": "SPEND",
+      "energyValue": 40,
+      "dimensionId": 6,
+      "createdAtEpochMillis": 1794639600000
+    },
+    {
+      "dateIso": "2026-11-14",
+      "timeSlot": "AFTERNOON",
+      "activity": "Call a friend",
+      "situationalNote": "Long chat",
+      "direction": "GAIN",
+      "energyValue": 45,
+      "dimensionId": 4,
+      "createdAtEpochMillis": 1794668400000
+    }
+  ],
+  "reminders": [
+    {
+      "timeSlot": "EARLY_MORNING",
+      "hour": 9,
+      "minute": 30,
+      "isEnabled": true
+    },
+    {
+      "timeSlot": "LATE_MORNING",
+      "hour": 12,
+      "minute": 30,
+      "isEnabled": true
+    },
+    {
+      "timeSlot": "AFTERNOON",
+      "hour": 17,
+      "minute": 30,
+      "isEnabled": true
+    },
+    {
+      "timeSlot": "EVENING",
+      "hour": 21,
+      "minute": 0,
+      "isEnabled": true
+    }
+  ]
+}
