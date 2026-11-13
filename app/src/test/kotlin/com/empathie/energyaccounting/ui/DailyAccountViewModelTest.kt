@@ -1,0 +1,173 @@
+package com.empathie.energyaccounting.ui
+
+import androidx.room.Room
+import androidx.test.core.app.ApplicationProvider
+import com.empathie.energyaccounting.data.local.EnergyAccountingDatabase
+import com.empathie.energyaccounting.data.repository.EnergyAccountingRepository
+import com.empathie.energyaccounting.domain.model.Direction
+import com.empathie.energyaccounting.domain.model.Entry
+import com.empathie.energyaccounting.domain.model.TimeSlot
+import com.empathie.energyaccounting.ui.daily.DailyAccountViewModel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runTest
+import org.junit.After
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+
+@RunWith(RobolectricTestRunner::class)
+class DailyAccountViewModelTest {
+    private lateinit var db: EnergyAccountingDatabase
+    private lateinit var repo: EnergyAccountingRepository
+    private val fixedClock = Clock.fixed(Instant.parse("2026-11-12T14:15:00Z"), ZoneId.of("UTC"))
+
+    @Before
+    fun setUp() = runTest {
+        db = Room.inMemoryDatabaseBuilder(
+            ApplicationProvider.getApplicationContext(),
+            EnergyAccountingDatabase::class.java
+        ).allowMainThreadQueries().build()
+        db.ensureSeeded()
+        repo = EnergyAccountingRepository(db)
+    }
+
+    @After
+    fun tearDown() {
+        db.close()
+    }
+
+    @Test
+    fun `openNewEntrySheet on Today preselects TimeSlot from clock and saving updates DailyAccount`() = runTest {
+        val vm = DailyAccountViewModel(repo, fixedClock)
+        val dims = repo.observeActiveDimensions().first()
+        vm.openNewEntrySheet(preferredSlot = null)
+
+        val draft = vm.draftState.value!!
+        assertEquals(TimeSlot.AFTERNOON, draft.timeSlot)
+
+        vm.onActivityChange("Quiet walk")
+        vm.onDirectionChange(Direction.GAIN)
+        vm.onEnergyValueChange(40)
+        vm.onSelectDimension(dims.first().id)
+        vm.saveDraft()
+
+        assertNull(vm.draftState.value)
+        val account = repo.observeDailyAccount(LocalDate.of(2026, 11, 12)).first()
+        assertEquals(40, account.totalGain)
+        assertEquals(40, account.netBalance)
+    }
+
+    @Test
+    fun `onSelectDimension switches the single selected dimension in one tap`() = runTest {
+        val vm = DailyAccountViewModel(repo, fixedClock)
+        val dims = repo.observeActiveDimensions().first()
+        vm.openNewEntrySheet(TimeSlot.EARLY_MORNING)
+
+        vm.onSelectDimension(dims[0].id)
+        assertEquals(dims[0].id, vm.draftState.value!!.selectedDimensionId)
+
+        vm.onSelectDimension(dims[1].id)
+        assertEquals(dims[1].id, vm.draftState.value!!.selectedDimensionId)
+    }
+
+    @Test
+    fun `saving without a dimension keeps the draft open and inserts nothing`() = runTest {
+        val vm = DailyAccountViewModel(repo, fixedClock)
+        vm.openNewEntrySheet(preferredSlot = TimeSlot.EVENING)
+        vm.onActivityChange("Unknown activity")
+
+        vm.saveDraft()
+
+        assertNotNull(vm.draftState.value)
+        val account = repo.observeDailyAccount(LocalDate.of(2026, 11, 12)).first()
+        assertEquals(0, account.slots.getValue(TimeSlot.EVENING).entries.size)
+    }
+
+    @Test
+    fun `requestNewEntrySheet on a future date asks for confirmation before opening the sheet`() = runTest {
+        val vm = DailyAccountViewModel(repo, fixedClock)
+        vm.selectDate(LocalDate.of(2026, 11, 14))
+
+        vm.requestNewEntrySheet(TimeSlot.AFTERNOON)
+
+        assertNull(vm.draftState.value)
+        assertEquals(TimeSlot.AFTERNOON, vm.pendingFutureSlotWarning.value)
+
+        vm.confirmFutureEntryWarning()
+
+        assertNull(vm.pendingFutureSlotWarning.value)
+        assertEquals(TimeSlot.AFTERNOON, vm.draftState.value!!.timeSlot)
+    }
+
+    @Test
+    fun `editing an entry preserves its archived dimension`() = runTest {
+        val date = LocalDate.of(2026, 11, 12)
+        val customId = repo.createCustomDimension("Focus", 3)
+        val custom = repo.observeAllDimensions().first().first { it.id == customId }
+        repo.saveEntry(
+            Entry(
+                date = date,
+                timeSlot = TimeSlot.AFTERNOON,
+                activity = "Deep work",
+                situationalNote = null,
+                direction = Direction.SPEND,
+                energyValue = 60,
+                dimension = custom,
+                createdAtEpochMillis = 1000L,
+            )
+        )
+        repo.removeOrArchiveCustomDimension(customId)
+
+        val vm = DailyAccountViewModel(repo, fixedClock)
+        vm.selectDate(date)
+        val entry = repo.observeDailyAccount(date).first()
+            .slots.getValue(TimeSlot.AFTERNOON).entries.first()
+
+        vm.openEditEntrySheet(entry)
+        vm.onSituationalNoteChange("Note only")
+        vm.saveDraft()
+
+        val saved = repo.observeDailyAccount(date).first()
+            .slots.getValue(TimeSlot.AFTERNOON).entries.first()
+        assertEquals(customId, saved.dimension.id)
+        assertTrue(saved.dimension.isArchived)
+        assertEquals("Note only", saved.situationalNote)
+    }
+
+    @Test
+    fun `openNewEntrySheet closes an open calendar sheet`() {
+        val vm = DailyAccountViewModel(repo, fixedClock)
+        vm.openCalendar()
+        assertTrue(vm.isCalendarOpen.value)
+
+        vm.openNewEntrySheet()
+
+        assertFalse(vm.isCalendarOpen.value)
+    }
+
+    @Test
+    fun `concurrent saveDraft calls insert only one entry`() = runTest {
+        val vm = DailyAccountViewModel(repo, fixedClock)
+        val dimensions = repo.observeActiveDimensions().first()
+        vm.openNewEntrySheet(preferredSlot = TimeSlot.AFTERNOON)
+        vm.onActivityChange("Quiet walk")
+        vm.onEnergyValueChange(40)
+        vm.onSelectDimension(dimensions.first().id)
+
+        val first = launch { vm.saveDraft() }
+        val second = launch { vm.saveDraft() }
+        first.join()
+        second.join()
+
+        val entries = repo.observeDailyAccount(LocalDate.of(2026, 11, 12)).first()
+            .slots.getValue(TimeSlot.AFTERNOON).entries
+        assertEquals(1, entries.size)
+    }
+}

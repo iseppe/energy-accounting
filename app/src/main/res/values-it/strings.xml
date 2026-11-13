@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Energy Accounting</string>
+
+    <!-- Navigation -->
+    <string name="tab_daily_account">Bilancio giornaliero</string>
+    <string name="tab_insights">Panoramica</string>
+    <string name="tab_manage">Gestisci ed esporta</string>
+
+    <!-- Daily Account -->
+    <string name="today">Oggi</string>
+    <string name="previous_day">Giorno precedente</string>
+    <string name="next_day">Giorno successivo</string>
+    <string name="open_calendar">Apri lo storico</string>
+    <string name="total_gain">Guadagno (+)</string>
+    <string name="total_spend">Consumo (−)</string>
+    <string name="net_balance">Saldo netto</string>
+    <string name="no_entries">Nessuna voce</string>
+    <string name="add_entry">Aggiungi voce</string>
+    <string name="edit_entry">Modifica voce</string>
+    <string name="add_entry_for_slot">Aggiungi voce per %1$s</string>
+    <string name="edit_entry_for_slot">Modifica voce per %1$s</string>
+    <string name="add_entry_to_slot">Aggiungi voce a %1$s</string>
+    <string name="calendar_history">Storico</string>
+    <string name="previous_month">Mese precedente</string>
+    <string name="next_month">Mese successivo</string>
+    <string name="close">Chiudi</string>
+    <string name="future_date_warning_title">Data futura</string>
+    <string name="future_date_warning_body">Stai aggiungendo una voce per %1$s, che è una data futura. Vuoi continuare?</string>
+    <string name="continue_action">Continua</string>
+    <string name="go_back">Torna indietro</string>
+
+    <!-- Time slots -->
+    <string name="time_slot_early_morning">Mattina presto</string>
+    <string name="time_slot_late_morning">Tarda mattina</string>
+    <string name="time_slot_afternoon">Pomeriggio</string>
+    <string name="time_slot_evening">Sera</string>
+
+    <!-- Entry sheet -->
+    <string name="pinned_templates">Modelli fissati</string>
+    <string name="all_templates">Tutti i modelli salvati</string>
+    <string name="more_templates">...</string>
+    <string name="activity">Attività</string>
+    <string name="activity_placeholder">es. Routine del mattino</string>
+    <string name="situational_note">Nota situazionale (opzionale)</string>
+    <string name="situational_note_placeholder">es. Treno in ritardo, folla rumorosa</string>
+    <string name="time_slot">Fascia oraria</string>
+    <string name="direction_and_value">Direzione e valore energetico</string>
+    <string name="direction_spend">Consumo (dispersione)</string>
+    <string name="direction_gain">Guadagno (ricarica)</string>
+    <string name="energy_value">Valore energetico</string>
+    <string name="energy_dimensions">Dimensione energetica</string>
+    <string name="dimensions_hint">Seleziona una dimensione per questa voce.</string>
+    <string name="update_default_template">Aggiorna il modello predefinito per \"%1$s\"</string>
+    <string name="save">Salva</string>
+    <string name="cancel">Annulla</string>
+    <string name="delete">Elimina</string>
+    <string name="edit">Modifica</string>
+    <string name="entry_deleted">Voce eliminata</string>
+    <string name="undo">Annulla</string>
+    <string name="delete_entry_confirmation">Eliminare questa voce?</string>
+
+    <!-- Dimensions -->
+    <string name="dimension_physical">Fisico</string>
+    <string name="dimension_cognitive">Cognitivo</string>
+    <string name="dimension_sensory">Sensoriale</string>
+    <string name="dimension_social">Sociale</string>
+    <string name="dimension_emotional">Emotivo</string>
+
+    <!-- Insights -->
+    <string name="today_period">Oggi</string>
+    <string name="last_7_days">Ultimi 7 giorni</string>
+    <string name="last_30_days">Ultimi 30 giorni</string>
+    <string name="custom_range">Intervallo personalizzato</string>
+    <string name="period_summary">Riepilogo del periodo</string>
+    <string name="average_daily_net">Saldo medio giornaliero</string>
+    <string name="active_days">Giorni registrati</string>
+    <string name="spend_by_dimension">Consumo per dimensione</string>
+    <string name="gain_by_dimension">Guadagno per dimensione</string>
+    <string name="by_time_slot">Per fascia oraria</string>
+    <string name="per_day">/giorno</string>
+
+    <!-- Manage & Export -->
+    <string name="activity_templates">Modelli di attività</string>
+    <string name="energy_dimensions_management">Dimensioni energetiche</string>
+    <string name="check_in_reminders">Promemoria</string>
+    <string name="appearance">Aspetto</string>
+    <string name="theme_system">Sistema</string>
+    <string name="theme_dark">Scuro</string>
+    <string name="theme_light">Chiaro</string>
+    <string name="language">Lingua</string>
+    <string name="language_system">Sistema</string>
+    <string name="language_english">English</string>
+    <string name="language_italian">Italiano</string>
+    <string name="export_practitioner_pdf">Esporta report PDF per il professionista</string>
+    <string name="export_csv">Esporta CSV</string>
+    <string name="export_json_backup">Esporta backup JSON</string>
+    <string name="export_debug_log">Esporta log di debug</string>
+    <string name="restore_json_backup">Ripristina backup JSON</string>
+    <string name="restore_mode_merge">Unisci senza duplicati</string>
+    <string name="restore_mode_replace">Sostituisci tutti i dati locali</string>
+    <string name="add_custom_dimension">Aggiungi dimensione personalizzata</string>
+    <string name="dimension_name">Nome della dimensione</string>
+    <string name="dimension_name_in_use">Esiste già una dimensione con questo nome</string>
+    <string name="dimension_archived">archiviata</string>
+    <string name="archive">Archivia</string>
+    <string name="unarchive">Ripristina</string>
+    <string name="pin">Fissa</string>
+    <string name="unpin">Rimuovi</string>
+    <string name="create">Crea</string>
+    <string name="default_direction">Direzione predefinita</string>
+    <string name="default_value">Valore energetico predefinito</string>
+    <string name="default_dimension">Dimensione energetica</string>
+    <string name="reminder_slot_description">Ti ricorda solo se %1$s non ha ancora voci.</string>
+    <string name="notification_channel_name">Promemoria</string>
+    <string name="notification_channel_description">Promemoria locali e discreti per registrare le voci di una fascia oraria.</string>
+    <string name="notification_title">È ora di fare il punto</string>
+    <string name="notification_body">Nessuna voce registrata per %1$s. Tocca per aggiungerne una.</string>
+    <string name="reminder_permission_rationale">Le notifiche permettono all\'app di ricordarti di registrare le voci. Senza di esse i promemoria restano silenziosi.</string>
+    <string name="send_test_notification">Invia notifica di prova</string>
+    <string name="test_notification_sent">Notifica di prova inviata</string>
+    <string name="select_date_range">Seleziona intervallo di date</string>
+    <string name="start_date">Data iniziale</string>
+    <string name="end_date">Data finale</string>
+    <string name="apply">Applica</string>
+    <string name="export_failed">Esportazione non riuscita</string>
+    <string name="restore_complete">Backup ripristinato</string>
+    <string name="restore_failed">Ripristino non riuscito</string>
+    <string name="template_name_in_use">Esiste già un modello con questo nome</string>
+    <string name="build_id_label">Build: %1$s</string>
+
+    <!-- PDF report -->
+    <string name="pdf_report_title">Bilancio energetico giornaliero</string>
+    <string name="pdf_period_label">Periodo</string>
+    <string name="pdf_period_summary">Riepilogo del periodo</string>
+    <string name="pdf_days_logged">Giorni registrati</string>
+    <string name="pdf_average_daily_net">Saldo medio giornaliero</string>
+    <string name="pdf_spend_by_primary">Consumo per dimensione</string>
+    <string name="pdf_gain_by_primary">Guadagno per dimensione</string>
+    <string name="pdf_by_time_slot">Per fascia oraria</string>
+    <string name="pdf_daily_totals">Totali giornalieri</string>
+    <string name="pdf_column_date_slot">Data / Fascia oraria</string>
+    <string name="pdf_column_activity">Attività e nota situazionale</string>
+    <string name="pdf_column_dimension">Dimensione</string>
+    <string name="pdf_column_value">Valore</string>
+    <string name="pdf_summary_gain">Guadagno totale</string>
+    <string name="pdf_summary_spend">Consumo totale</string>
+    <string name="pdf_summary_net">Saldo netto</string>
+</resources>
