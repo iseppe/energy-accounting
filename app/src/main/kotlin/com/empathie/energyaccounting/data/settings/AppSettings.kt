@@ -39,9 +39,25 @@ class AppSettings(context: Context) {
         preferences.edit().putString(KEY_LANGUAGE, language.name).apply()
     }
 
+    fun vibrationEnabled(): Boolean =
+        preferences.getBoolean(KEY_VIBRATION, true)
+
+    fun setVibrationEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_VIBRATION, enabled).apply()
+    }
+
+    fun devModeEnabled(): Boolean =
+        preferences.getBoolean(KEY_DEV_MODE, false)
+
+    fun setDevModeEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_DEV_MODE, enabled).apply()
+    }
+
     private companion object {
         const val PREFERENCES_NAME = "empathie_settings"
         const val KEY_THEME_MODE = "theme_mode"
         const val KEY_LANGUAGE = "app_language"
+        const val KEY_VIBRATION = "vibration_enabled"
+        const val KEY_DEV_MODE = "dev_mode_enabled"
     }
 }

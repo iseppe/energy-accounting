@@ -2,8 +2,10 @@ package com.empathie.energyaccounting.ui.manage
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.empathie.energyaccounting.data.diagnostics.AdjustableClock
 import com.empathie.energyaccounting.data.diagnostics.AppLogger
 import com.empathie.energyaccounting.data.diagnostics.DebugLogExporter
+import com.empathie.energyaccounting.data.diagnostics.FakeClockState
 import com.empathie.energyaccounting.data.export.BackupSerializer
 import com.empathie.energyaccounting.data.export.CsvExporter
 import com.empathie.energyaccounting.data.export.PdfLabels
@@ -16,8 +18,11 @@ import com.empathie.energyaccounting.domain.model.ActivityTemplate
 import com.empathie.energyaccounting.domain.model.CheckInReminder
 import com.empathie.energyaccounting.domain.model.DailyAccount
 import com.empathie.energyaccounting.domain.model.EnergyDimension
+import com.empathie.energyaccounting.domain.model.TimeSlot
 import com.empathie.energyaccounting.domain.service.InsightsCalculator
+import com.empathie.energyaccounting.reminder.CheckInReminderReceiver
 import com.empathie.energyaccounting.reminder.ReminderScheduler
+import com.empathie.energyaccounting.reminder.SlotEvaluationResult
 import com.empathie.energyaccounting.ui.theme.ThemeMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,6 +58,7 @@ class ManageExportViewModel(
     private val reminderScheduler: ReminderScheduler,
     private val settings: AppSettings,
     private val debugLogExporter: DebugLogExporter,
+    private val clock: AdjustableClock = AdjustableClock(),
 ) : ViewModel() {
 
     val templates: StateFlow<List<ActivityTemplate>> = repo.observeTemplates()
@@ -70,6 +76,19 @@ class ManageExportViewModel(
     private val _appLanguage = MutableStateFlow(settings.appLanguage())
     val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
 
+    private val _vibrationEnabled = MutableStateFlow(settings.vibrationEnabled())
+    val vibrationEnabled: StateFlow<Boolean> = _vibrationEnabled.asStateFlow()
+
+    private val _devModeEnabled = MutableStateFlow(settings.devModeEnabled())
+    val devModeEnabled: StateFlow<Boolean> = _devModeEnabled.asStateFlow()
+
+    val fakeClockState: StateFlow<FakeClockState> = clock.state
+
+    private val _lastSlotEvaluation = MutableStateFlow<SlotEvaluationResult?>(null)
+    val lastSlotEvaluation: StateFlow<SlotEvaluationResult?> = _lastSlotEvaluation.asStateFlow()
+
+    private var buildFooterTaps = 0
+
     private val _message = MutableStateFlow<ManageMessage?>(null)
     val message: StateFlow<ManageMessage?> = _message.asStateFlow()
 
@@ -81,6 +100,66 @@ class ManageExportViewModel(
     fun setAppLanguage(language: AppLanguage) {
         _appLanguage.value = language
         settings.setAppLanguage(language)
+    }
+
+    fun setVibrationEnabled(enabled: Boolean) {
+        _vibrationEnabled.value = enabled
+        settings.setVibrationEnabled(enabled)
+    }
+
+    fun onBuildFooterTapped(): Boolean {
+        if (_devModeEnabled.value) return false
+        buildFooterTaps += 1
+        if (buildFooterTaps < 5) return false
+
+        buildFooterTaps = 0
+        _devModeEnabled.value = true
+        settings.setDevModeEnabled(true)
+        AppLogger.info("DevMode", "Developer mode enabled")
+        return true
+    }
+
+    fun disableDevMode() {
+        _devModeEnabled.value = false
+        settings.setDevModeEnabled(false)
+        resetFakeClock()
+        AppLogger.info("DevMode", "Developer mode disabled; clock restored to system")
+    }
+
+    fun setFakeDateTime(date: java.time.LocalDate, time: java.time.LocalTime) {
+        clock.setFakeDateTime(date, time)
+        AppLogger.info("DevMode", "Fake clock set to $date $time")
+    }
+
+    fun advanceFakeClockMinutes(minutes: Long) {
+        clock.advanceMinutes(minutes)
+    }
+
+    fun resetFakeClock() {
+        clock.resetToSystem()
+        _lastSlotEvaluation.value = null
+    }
+
+    suspend fun evaluateSlotAtCurrentClock(
+        context: android.content.Context,
+        timeSlot: TimeSlot,
+    ): SlotEvaluationResult {
+        val date = java.time.LocalDate.now(clock)
+        val result = withContext(Dispatchers.IO) {
+            CheckInReminderReceiver.evaluateSlotForDiagnostics(
+                context = context,
+                dao = repo.dao,
+                date = date,
+                timeSlot = timeSlot,
+            )
+        }
+        _lastSlotEvaluation.value = result
+        return result
+    }
+
+    fun scheduleTestAlarmIn5Seconds(timeSlot: TimeSlot) {
+        reminderScheduler.scheduleTestAlarmInSeconds(timeSlot, seconds = 5, forcePost = true)
+        AppLogger.info("DevMode", "Scheduled OS alarm in 5s for ${timeSlot.name}")
     }
 
     fun consumeMessage() {

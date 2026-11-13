@@ -20,7 +20,24 @@ import com.empathie.energyaccounting.domain.model.TimeSlot
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.time.Clock
 import java.time.LocalDate
+
+/**
+ * Structured outcome of a Developer Mode slot evaluation, so the UI can explain exactly
+ * why a reminder would (not) appear.
+ */
+sealed interface SlotEvaluationResult {
+    data class Posted(val date: LocalDate, val timeSlot: TimeSlot) : SlotEvaluationResult
+
+    data class SuppressedEntriesExist(
+        val date: LocalDate,
+        val timeSlot: TimeSlot,
+        val entryCount: Int,
+    ) : SlotEvaluationResult
+
+    data object BlockedNotificationsDisabled : SlotEvaluationResult
+}
 
 /**
  * Fires at a slot's configured time and posts a notification only when that slot has no
@@ -40,9 +57,12 @@ class CheckInReminderReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val dao = DatabaseProvider.get(context).dao()
-                val today = LocalDate.now()
+                val app = context.applicationContext as? com.empathie.energyaccounting.EnergyAccountingApp
+                val clock = app?.clock ?: Clock.systemDefaultZone()
+                val today = LocalDate.now(clock)
+                val forcePost = intent.getBooleanExtra(EXTRA_FORCE_POST, false)
 
-                if (shouldPostNotification(dao, today, timeSlot)) {
+                if (forcePost || shouldPostNotification(dao, today, timeSlot)) {
                     runCatching { postNotification(localizedContext(context), timeSlot) }
                         .onSuccess {
                             AppLogger.info("Reminder", "Posted check-in notification for ${timeSlot.name}")
@@ -82,6 +102,7 @@ class CheckInReminderReceiver : BroadcastReceiver() {
     companion object {
         const val EXTRA_TIME_SLOT = "extra_time_slot"
         const val EXTRA_OPEN_ADD_SHEET = "extra_open_add_sheet"
+        const val EXTRA_FORCE_POST = "extra_force_post"
         const val NOTIFICATION_CHANNEL_ID = "energy_checkin_reminders"
 
         suspend fun shouldPostNotification(
@@ -89,6 +110,38 @@ class CheckInReminderReceiver : BroadcastReceiver() {
             today: LocalDate,
             timeSlot: TimeSlot,
         ): Boolean = dao.countEntriesForSlot(today.toString(), timeSlot.name) == 0
+
+        /**
+         * Developer Mode evaluation: reports exactly what a real alarm would do at [date]
+         * for [timeSlot], and posts the notification when it would be posted.
+         */
+        suspend fun evaluateSlotForDiagnostics(
+            context: Context,
+            dao: EnergyAccountingDao,
+            date: LocalDate,
+            timeSlot: TimeSlot,
+            forcePost: Boolean = false,
+        ): SlotEvaluationResult {
+            if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+                return SlotEvaluationResult.BlockedNotificationsDisabled
+            }
+
+            val entryCount = dao.countEntriesForSlot(date.toString(), timeSlot.name)
+            return if (forcePost || entryCount == 0) {
+                postNotification(localizedContext(context), timeSlot)
+                AppLogger.info(
+                    "Reminder",
+                    "Diagnostics posted ${timeSlot.name} for $date (force=$forcePost, entries=$entryCount)",
+                )
+                SlotEvaluationResult.Posted(date, timeSlot)
+            } else {
+                AppLogger.info(
+                    "Reminder",
+                    "Diagnostics suppressed ${timeSlot.name} for $date: $entryCount entries",
+                )
+                SlotEvaluationResult.SuppressedEntriesExist(date, timeSlot, entryCount)
+            }
+        }
 
         /**
          * Posts a live sample notification immediately, used by the Manage & Export

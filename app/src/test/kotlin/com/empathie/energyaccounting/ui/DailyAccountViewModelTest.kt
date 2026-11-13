@@ -2,6 +2,7 @@ package com.empathie.energyaccounting.ui
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.empathie.energyaccounting.data.diagnostics.AdjustableClock
 import com.empathie.energyaccounting.data.local.EnergyAccountingDatabase
 import com.empathie.energyaccounting.data.repository.EnergyAccountingRepository
 import com.empathie.energyaccounting.domain.model.Direction
@@ -17,9 +18,12 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
+import android.os.Looper
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 
 @RunWith(RobolectricTestRunner::class)
@@ -169,5 +173,25 @@ class DailyAccountViewModelTest {
         val entries = repo.observeDailyAccount(LocalDate.of(2026, 11, 12)).first()
             .slots.getValue(TimeSlot.AFTERNOON).entries
         assertEquals(1, entries.size)
+    }
+
+    @Test
+    fun `fake clock moves the selected day and today`() = runTest {
+        val adjustable = AdjustableClock(
+            Clock.fixed(Instant.parse("2026-11-13T08:00:00Z"), ZoneId.of("UTC"))
+        )
+        val vm = DailyAccountViewModel(repo, adjustable)
+        assertEquals(LocalDate.of(2026, 11, 13), vm.selectedDate.value)
+
+        adjustable.setFakeDateTime(LocalDate.of(2026, 11, 20), LocalTime.of(9, 29))
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(LocalDate.of(2026, 11, 20), vm.selectedDate.value)
+        assertEquals(LocalDate.of(2026, 11, 20), vm.todayDate.value)
+
+        adjustable.resetToSystem()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(LocalDate.of(2026, 11, 13), vm.selectedDate.value)
     }
 }

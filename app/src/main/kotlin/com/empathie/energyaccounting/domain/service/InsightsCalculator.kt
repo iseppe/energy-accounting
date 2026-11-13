@@ -2,12 +2,14 @@ package com.empathie.energyaccounting.domain.service
 
 import com.empathie.energyaccounting.domain.model.DimensionImpactSummary
 import com.empathie.energyaccounting.domain.model.Direction
+import com.empathie.energyaccounting.domain.model.EnergyChartPoint
 import com.empathie.energyaccounting.domain.model.EnergyDimension
 import com.empathie.energyaccounting.domain.model.Entry
 import com.empathie.energyaccounting.domain.model.PeriodInsights
 import com.empathie.energyaccounting.domain.model.TimeSlot
 import com.empathie.energyaccounting.domain.model.TimeSlotImpactSummary
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
 /**
@@ -64,6 +66,34 @@ object InsightsCalculator {
             )
         }
 
+        val chartPoints = if (startDate == endDate) {
+            byTimeSlot.map { slot ->
+                EnergyChartPoint(
+                    label = slot.timeSlot.name,
+                    timeSlot = slot.timeSlot,
+                    gain = slot.totalGain,
+                    spend = slot.totalSpend,
+                    netBalance = slot.netBalance,
+                )
+            }
+        } else {
+            generateSequence(startDate) { date -> date.plusDays(1) }
+                .takeWhile { date -> !date.isAfter(endDate) }
+                .map { date ->
+                    val dayEntries = inRange.filter { it.date == date }
+                    val gain = dayEntries.filter { it.direction == Direction.GAIN }.sumOf { it.energyValue }
+                    val spend = dayEntries.filter { it.direction == Direction.SPEND }.sumOf { it.energyValue }
+                    EnergyChartPoint(
+                        label = date.format(CHART_DATE_FORMATTER),
+                        date = date,
+                        gain = gain,
+                        spend = spend,
+                        netBalance = gain - spend,
+                    )
+                }
+                .toList()
+        }
+
         return PeriodInsights(
             startDate = startDate,
             endDate = endDate,
@@ -74,9 +104,12 @@ object InsightsCalculator {
             averageDailyNet = averageDailyNet,
             byDimension = byDimension,
             byTimeSlot = byTimeSlot,
+            chartPoints = chartPoints,
         )
     }
 
     private fun sharePercent(part: Int, total: Int): Int =
         if (total == 0 || part == 0) 0 else (part * 100.0 / total).roundToInt()
+
+    private val CHART_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM")
 }

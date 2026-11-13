@@ -8,13 +8,13 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
@@ -22,13 +22,10 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.empathie.energyaccounting.R
 import com.empathie.energyaccounting.domain.model.ActivityTemplate
@@ -51,8 +47,9 @@ import com.empathie.energyaccounting.domain.model.Direction
 import com.empathie.energyaccounting.domain.model.EnergyDimension
 import com.empathie.energyaccounting.domain.model.TimeSlot
 import com.empathie.energyaccounting.domain.service.EnergyFormatter
+import com.empathie.energyaccounting.ui.common.EnergyDirectionAndValueSelector
+import com.empathie.energyaccounting.ui.common.LocalAppHaptics
 import com.empathie.energyaccounting.ui.theme.LocalEmpathieColors
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -75,7 +72,7 @@ internal fun AddEditEntrySheet(
 ) {
     val colors = LocalEmpathieColors.current
     val context = LocalContext.current
-    val accent = if (draft.direction == Direction.GAIN) colors.gain else colors.spend
+    val haptics = LocalAppHaptics.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val slotLabel = timeSlotLabel(context, draft.timeSlot)
 
@@ -130,11 +127,8 @@ internal fun AddEditEntrySheet(
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 SectionLabel(stringResource(R.string.time_slot))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    TimeSlot.entries.forEach { timeSlot ->
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(TimeSlot.entries) { timeSlot ->
                         SelectablePill(
                             label = timeSlotLabel(context, timeSlot),
                             selected = draft.timeSlot == timeSlot,
@@ -144,66 +138,20 @@ internal fun AddEditEntrySheet(
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionLabel(stringResource(R.string.direction_and_value))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SelectablePill(
-                        label = stringResource(R.string.direction_spend),
-                        selected = draft.direction == Direction.SPEND,
-                        accent = colors.spend,
-                        onClick = { onDirectionChange(Direction.SPEND) },
-                    )
-                    SelectablePill(
-                        label = stringResource(R.string.direction_gain),
-                        selected = draft.direction == Direction.GAIN,
-                        accent = colors.gain,
-                        onClick = { onDirectionChange(Direction.GAIN) },
-                    )
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    FilledTonalButton(
-                        onClick = { onEnergyValueChange((draft.energyValue - 5).coerceAtLeast(5)) }
-                    ) {
-                        Text("-5")
-                    }
-                    Slider(
-                        value = draft.energyValue.coerceIn(5, 100).toFloat(),
-                        onValueChange = { value -> onEnergyValueChange((value / 5f).roundToInt() * 5) },
-                        valueRange = 5f..100f,
-                        steps = 18,
-                        colors = SliderDefaults.colors(
-                            thumbColor = accent,
-                            activeTrackColor = accent,
-                        ),
-                        modifier = Modifier.weight(1f),
-                    )
-                    FilledTonalButton(
-                        onClick = { onEnergyValueChange((draft.energyValue + 5).coerceAtMost(100)) }
-                    ) {
-                        Text("+5")
-                    }
-                    Text(
-                        text = EnergyFormatter.formatSignedValue(draft.direction, draft.energyValue),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = accent,
-                        textAlign = TextAlign.End,
-                        modifier = Modifier.widthIn(min = 52.dp),
-                    )
-                }
-            }
+            EnergyDirectionAndValueSelector(
+                direction = draft.direction,
+                energyValue = draft.energyValue,
+                onDirectionChange = onDirectionChange,
+                onEnergyValueChange = onEnergyValueChange,
+            )
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 SectionLabel(stringResource(R.string.energy_dimensions))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    visibleDimensions(dimensions, draft.selectedDimensionId).forEach { dimension ->
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(
+                        visibleDimensions(dimensions, draft.selectedDimensionId),
+                        key = { it.id },
+                    ) { dimension ->
                         DimensionPill(
                             label = dimensionLabel(context, dimension),
                             selected = draft.selectedDimensionId == dimension.id,
@@ -219,10 +167,16 @@ internal fun AddEditEntrySheet(
             }
 
             if (draft.matchedTemplate != null && draft.hasModifiedTemplateDefaults) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.offset(x = (-12).dp),
+                ) {
                     Checkbox(
                         checked = draft.updateTemplateDefaults,
-                        onCheckedChange = onUpdateTemplateDefaultsChange,
+                        onCheckedChange = { checked ->
+                            haptics.tick()
+                            onUpdateTemplateDefaultsChange(checked)
+                        },
                     )
                     Text(
                         text = stringResource(
@@ -235,7 +189,10 @@ internal fun AddEditEntrySheet(
             }
 
             Button(
-                onClick = onSave,
+                onClick = {
+                    haptics.tick()
+                    onSave()
+                },
                 enabled = draft.activity.isNotBlank() &&
                     draft.selectedDimensionId != null &&
                     !isSaving,
@@ -245,7 +202,13 @@ internal fun AddEditEntrySheet(
             }
 
             if (onDelete != null) {
-                TextButton(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
+                TextButton(
+                    onClick = {
+                        haptics.tick()
+                        onDelete()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     Text(stringResource(R.string.delete), color = colors.spend)
                 }
             }
@@ -270,10 +233,14 @@ private fun ActivitySuggestions(
         .take(4)
     if (suggestions.isEmpty()) return
 
+    val haptics = LocalAppHaptics.current
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         suggestions.forEach { template ->
             AssistChip(
-                onClick = { onApplyTemplate(template) },
+                onClick = {
+                    haptics.tick()
+                    onApplyTemplate(template)
+                },
                 label = { Text(template.activityName) },
             )
         }
@@ -290,6 +257,7 @@ private fun QuickTemplates(
 
     var showAllTemplates by remember { mutableStateOf(false) }
     val visible = templates.take(MAX_VISIBLE_TEMPLATES)
+    val haptics = LocalAppHaptics.current
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         SectionLabel(stringResource(R.string.pinned_templates))
@@ -300,7 +268,10 @@ private fun QuickTemplates(
             if (templates.size > MAX_VISIBLE_TEMPLATES) {
                 item(key = "more") {
                     AssistChip(
-                        onClick = { showAllTemplates = true },
+                        onClick = {
+                            haptics.tick()
+                            showAllTemplates = true
+                        },
                         label = { Text(stringResource(R.string.more_templates)) },
                     )
                 }
@@ -322,8 +293,12 @@ private fun QuickTemplates(
 
 @Composable
 private fun TemplateChip(template: ActivityTemplate, onClick: () -> Unit) {
+    val haptics = LocalAppHaptics.current
     AssistChip(
-        onClick = onClick,
+        onClick = {
+            haptics.tick()
+            onClick()
+        },
         leadingIcon = if (template.isPinned) {
             {
                 Icon(
@@ -392,11 +367,15 @@ private fun SelectablePill(
     onClick: () -> Unit,
 ) {
     val colors = LocalEmpathieColors.current
+    val haptics = LocalAppHaptics.current
     Surface(
         shape = RoundedCornerShape(50),
         color = if (selected) accent.copy(alpha = 0.18f) else colors.surfaceRaised,
         border = BorderStroke(1.dp, if (selected) accent else colors.border),
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier.clickable {
+            haptics.tick()
+            onClick()
+        },
     ) {
         Text(
             text = label,
@@ -414,13 +393,17 @@ private fun DimensionPill(
     onClick: () -> Unit,
 ) {
     val colors = LocalEmpathieColors.current
+    val haptics = LocalAppHaptics.current
     val accent = MaterialTheme.colorScheme.primary
 
     Surface(
         shape = RoundedCornerShape(50),
         color = if (selected) accent.copy(alpha = 0.22f) else colors.surfaceRaised,
         border = BorderStroke(1.dp, if (selected) accent else colors.border),
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier.clickable {
+            haptics.tick()
+            onClick()
+        },
     ) {
         Text(
             text = label,

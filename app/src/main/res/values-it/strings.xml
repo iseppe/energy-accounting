@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Energy Accounting</string>
-
-    <!-- Navigation -->
     <string name="tab_daily_account">Bilancio giornaliero</string>
     <string name="tab_insights">Panoramica</string>
     <string name="tab_manage">Gestisci ed esporta</string>
-
-    <!-- Daily Account -->
     <string name="today">Oggi</string>
     <string name="previous_day">Giorno precedente</string>
     <string name="next_day">Giorno successivo</string>
@@ -29,14 +25,10 @@
     <string name="future_date_warning_body">Stai aggiungendo una voce per %1$s, che è una data futura. Vuoi continuare?</string>
     <string name="continue_action">Continua</string>
     <string name="go_back">Torna indietro</string>
-
-    <!-- Time slots -->
     <string name="time_slot_early_morning">Mattina presto</string>
     <string name="time_slot_late_morning">Tarda mattina</string>
     <string name="time_slot_afternoon">Pomeriggio</string>
     <string name="time_slot_evening">Sera</string>
-
-    <!-- Entry sheet -->
     <string name="pinned_templates">Modelli fissati</string>
     <string name="all_templates">Tutti i modelli salvati</string>
     <string name="more_templates">...</string>
@@ -59,15 +51,11 @@
     <string name="entry_deleted">Voce eliminata</string>
     <string name="undo">Annulla</string>
     <string name="delete_entry_confirmation">Eliminare questa voce?</string>
-
-    <!-- Dimensions -->
     <string name="dimension_physical">Fisico</string>
     <string name="dimension_cognitive">Cognitivo</string>
     <string name="dimension_sensory">Sensoriale</string>
     <string name="dimension_social">Sociale</string>
     <string name="dimension_emotional">Emotivo</string>
-
-    <!-- Insights -->
     <string name="today_period">Oggi</string>
     <string name="last_7_days">Ultimi 7 giorni</string>
     <string name="last_30_days">Ultimi 30 giorni</string>
@@ -79,8 +67,6 @@
     <string name="gain_by_dimension">Guadagno per dimensione</string>
     <string name="by_time_slot">Per fascia oraria</string>
     <string name="per_day">/giorno</string>
-
-    <!-- Manage & Export -->
     <string name="activity_templates">Modelli di attività</string>
     <string name="energy_dimensions_management">Dimensioni energetiche</string>
     <string name="check_in_reminders">Promemoria</string>
@@ -128,8 +114,6 @@
     <string name="restore_failed">Ripristino non riuscito</string>
     <string name="template_name_in_use">Esiste già un modello con questo nome</string>
     <string name="build_id_label">Build: %1$s</string>
-
-    <!-- PDF report -->
     <string name="pdf_report_title">Bilancio energetico giornaliero</string>
     <string name="pdf_period_label">Periodo</string>
     <string name="pdf_period_summary">Riepilogo del periodo</string>
@@ -146,4 +130,34 @@
     <string name="pdf_summary_gain">Guadagno totale</string>
     <string name="pdf_summary_spend">Consumo totale</string>
     <string name="pdf_summary_net">Saldo netto</string>
+    <string name="vibration_feedback">Feedback con vibrazione</string>
+    <string name="energy_trend_chart">Andamento energetico</string>
+    <string name="share_pdf">Condividi PDF</string>
+    <string name="save_pdf">Salva PDF</string>
+    <string name="dev_mode_title">Modalità sviluppatore</string>
+    <string name="dev_mode_enabled_toast">Modalità sviluppatore attivata</string>
+    <string name="dev_mode_disable">Disattiva modalità sviluppatore</string>
+    <string name="dev_mode_hint">Tocca l\'ID build 5 volte per attivare la modalità sviluppatore</string>
+    <string name="fake_clock_enable">Usa orologio simulato</string>
+    <string name="fake_clock_label">Orologio simulato (dd/MM/yyyy HH:mm)</string>
+    <string name="fake_clock_reset">Ripristina orologio di sistema</string>
+    <string name="fake_clock_advance">+1 minuto</string>
+    <string name="dev_slot_evaluator">Test notifica fascia oraria</string>
+    <string name="dev_evaluate_slot">Valuta fascia oraria</string>
+    <string name="dev_fire_alarm_5s">Avvia sveglia di sistema tra 5s</string>
+    <string name="dev_alarm_scheduled_5s">Sveglia di sistema programmata tra 5 secondi</string>
+    <string name="dev_status_notifications">Notifiche</string>
+    <string name="dev_status_exact_alarms">Sveglie esatte</string>
+    <string name="dev_grant_exact_alarm">Concedi permesso sveglie esatte</string>
+    <string name="dev_result_posted">Notifica inviata per %1$s il %2$s</string>
+    <string name="dev_result_suppressed">Soppressa: %2$s ha già %1$d voci il %3$s</string>
+    <string name="dev_result_blocked">Bloccata: le notifiche sono disattivate per questa app</string>
+    <string name="dev_force_post">Forza invio indipendentemente dalle voci</string>
+    <string name="slot_short_early">Presto</string>
+    <string name="slot_short_late">Tarda</string>
+    <string name="slot_short_afternoon">Pomer.</string>
+    <string name="slot_short_evening">Sera</string>
+    <string name="dev_status_ok">OK</string>
+    <string name="dev_status_blocked">Bloccato</string>
+    <string name="dev_status_inexact">Fallback inesatto</string>
 </resources>

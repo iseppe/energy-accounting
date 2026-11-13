@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Energy Accounting</string>
-
-    <!-- Navigation -->
     <string name="tab_daily_account">Daily Account</string>
     <string name="tab_insights">Insights</string>
     <string name="tab_manage">Manage &amp; Export</string>
-
-    <!-- Daily Account -->
     <string name="today">Today</string>
     <string name="previous_day">Previous day</string>
     <string name="next_day">Next day</string>
@@ -29,14 +25,10 @@
     <string name="future_date_warning_body">You are adding an entry for %1$s, which is in the future. Do you want to continue?</string>
     <string name="continue_action">Continue</string>
     <string name="go_back">Go back</string>
-
-    <!-- Time slots -->
     <string name="time_slot_early_morning">Early Morning</string>
     <string name="time_slot_late_morning">Late Morning</string>
     <string name="time_slot_afternoon">Afternoon</string>
     <string name="time_slot_evening">Evening</string>
-
-    <!-- Entry sheet -->
     <string name="pinned_templates">Pinned templates</string>
     <string name="all_templates">All saved templates</string>
     <string name="more_templates">...</string>
@@ -59,15 +51,11 @@
     <string name="entry_deleted">Entry deleted</string>
     <string name="undo">Undo</string>
     <string name="delete_entry_confirmation">Delete this entry?</string>
-
-    <!-- Dimensions -->
     <string name="dimension_physical">Physical</string>
     <string name="dimension_cognitive">Cognitive</string>
     <string name="dimension_sensory">Sensory</string>
     <string name="dimension_social">Social</string>
     <string name="dimension_emotional">Emotional</string>
-
-    <!-- Insights -->
     <string name="today_period">Today</string>
     <string name="last_7_days">Last 7 days</string>
     <string name="last_30_days">Last 30 days</string>
@@ -79,8 +67,6 @@
     <string name="gain_by_dimension">Gain by dimension</string>
     <string name="by_time_slot">By time slot</string>
     <string name="per_day">/day</string>
-
-    <!-- Manage & Export -->
     <string name="activity_templates">Activity Templates</string>
     <string name="energy_dimensions_management">Energy Dimensions</string>
     <string name="check_in_reminders">Check-in Reminders</string>
@@ -128,8 +114,6 @@
     <string name="restore_failed">Restore failed</string>
     <string name="template_name_in_use">A template with this name already exists</string>
     <string name="build_id_label">Build: %1$s</string>
-
-    <!-- PDF report -->
     <string name="pdf_report_title">Daily Energy Account</string>
     <string name="pdf_period_label">Period</string>
     <string name="pdf_period_summary">Period summary</string>
@@ -146,4 +130,34 @@
     <string name="pdf_summary_gain">Total gain</string>
     <string name="pdf_summary_spend">Total spend</string>
     <string name="pdf_summary_net">Net balance</string>
+    <string name="vibration_feedback">Vibration feedback</string>
+    <string name="energy_trend_chart">Energy trend</string>
+    <string name="share_pdf">Share PDF</string>
+    <string name="save_pdf">Save PDF</string>
+    <string name="dev_mode_title">Developer Mode</string>
+    <string name="dev_mode_enabled_toast">Developer mode enabled</string>
+    <string name="dev_mode_disable">Disable Developer Mode</string>
+    <string name="dev_mode_hint">Tap the build ID 5 times to toggle Developer Mode</string>
+    <string name="fake_clock_enable">Use fake clock</string>
+    <string name="fake_clock_label">Fake clock (dd/MM/yyyy HH:mm)</string>
+    <string name="fake_clock_reset">Reset to system clock</string>
+    <string name="fake_clock_advance">+1 minute</string>
+    <string name="dev_slot_evaluator">Slot notification test</string>
+    <string name="dev_evaluate_slot">Evaluate slot now</string>
+    <string name="dev_fire_alarm_5s">Fire OS alarm in 5s</string>
+    <string name="dev_alarm_scheduled_5s">OS alarm scheduled in 5 seconds</string>
+    <string name="dev_status_notifications">Notifications</string>
+    <string name="dev_status_exact_alarms">Exact alarms</string>
+    <string name="dev_grant_exact_alarm">Grant exact alarm permission</string>
+    <string name="dev_result_posted">Posted notification for %1$s on %2$s</string>
+    <string name="dev_result_suppressed">Suppressed: %2$s already has %1$d entries on %3$s</string>
+    <string name="dev_result_blocked">Blocked: notifications are disabled for this app</string>
+    <string name="dev_force_post">Force post regardless of entries</string>
+    <string name="slot_short_early">Early</string>
+    <string name="slot_short_late">Late</string>
+    <string name="slot_short_afternoon">Aftern.</string>
+    <string name="slot_short_evening">Evening</string>
+    <string name="dev_status_ok">OK</string>
+    <string name="dev_status_blocked">Blocked</string>
+    <string name="dev_status_inexact">Inexact fallback</string>
 </resources>

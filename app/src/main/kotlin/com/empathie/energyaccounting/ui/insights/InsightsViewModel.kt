@@ -12,10 +12,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDate
 
@@ -77,6 +79,20 @@ class InsightsViewModel(
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    init {
+        // Keep relative periods anchored to Developer Mode's simulated "today".
+        (clock as? com.empathie.energyaccounting.data.diagnostics.AdjustableClock)?.let { adjustable ->
+            viewModelScope.launch {
+                adjustable.state.drop(1).collect {
+                    val current = _state.value.period
+                    if (current != InsightsPeriod.CUSTOM) {
+                        selectPeriod(current)
+                    }
+                }
+            }
+        }
+    }
 
     fun selectPeriod(period: InsightsPeriod) {
         _state.update { current ->

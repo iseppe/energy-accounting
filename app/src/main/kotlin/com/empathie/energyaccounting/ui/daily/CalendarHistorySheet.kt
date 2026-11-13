@@ -47,6 +47,7 @@ import java.util.Locale
 internal fun CalendarHistorySheet(
     month: YearMonth,
     selectedDate: LocalDate,
+    today: LocalDate,
     netBalances: Map<LocalDate, Int>,
     onMonthChange: (Long) -> Unit,
     onSelectDate: (LocalDate) -> Unit,
@@ -108,7 +109,6 @@ internal fun CalendarHistorySheet(
             val cells: List<LocalDate?> =
                 List(leadingBlanks) { null } + (1..month.lengthOfMonth()).map { month.atDay(it) }
             val weeks = cells.chunked(7)
-            val today = LocalDate.now()
 
             weeks.forEach { week ->
                 Row(modifier = Modifier.fillMaxWidth()) {

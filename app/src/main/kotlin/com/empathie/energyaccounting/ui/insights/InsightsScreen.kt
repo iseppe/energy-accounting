@@ -7,15 +7,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -39,6 +38,7 @@ import com.empathie.energyaccounting.domain.model.PeriodInsights
 import com.empathie.energyaccounting.domain.model.TimeSlotImpactSummary
 import com.empathie.energyaccounting.domain.service.EnergyFormatter
 import com.empathie.energyaccounting.ui.common.DateField
+import com.empathie.energyaccounting.ui.common.LocalAppHaptics
 import com.empathie.energyaccounting.ui.daily.dimensionLabel
 import com.empathie.energyaccounting.ui.daily.timeSlotLabel
 import com.empathie.energyaccounting.ui.theme.LocalEmpathieColors
@@ -49,42 +49,58 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
     val insights by viewModel.insights.collectAsStateWithLifecycle()
     val filteredEntries by viewModel.filteredEntries.collectAsStateWithLifecycle()
     val colors = LocalEmpathieColors.current
+    val haptics = LocalAppHaptics.current
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = 16.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 12.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { Spacer(Modifier.height(8.dp)) }
-
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = state.period == InsightsPeriod.TODAY,
-                    onClick = { viewModel.selectPeriod(InsightsPeriod.TODAY) },
-                    label = { Text(stringResource(R.string.today_period)) },
-                )
-                FilterChip(
-                    selected = state.period == InsightsPeriod.LAST_7_DAYS,
-                    onClick = { viewModel.selectPeriod(InsightsPeriod.LAST_7_DAYS) },
-                    label = { Text(stringResource(R.string.last_7_days)) },
-                )
-                FilterChip(
-                    selected = state.period == InsightsPeriod.LAST_30_DAYS,
-                    onClick = { viewModel.selectPeriod(InsightsPeriod.LAST_30_DAYS) },
-                    label = { Text(stringResource(R.string.last_30_days)) },
-                )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                item {
+                    FilterChip(
+                        selected = state.period == InsightsPeriod.TODAY,
+                        onClick = {
+                            haptics.tick()
+                            viewModel.selectPeriod(InsightsPeriod.TODAY)
+                        },
+                        label = { Text(stringResource(R.string.today_period)) },
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = state.period == InsightsPeriod.LAST_7_DAYS,
+                        onClick = {
+                            haptics.tick()
+                            viewModel.selectPeriod(InsightsPeriod.LAST_7_DAYS)
+                        },
+                        label = { Text(stringResource(R.string.last_7_days)) },
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = state.period == InsightsPeriod.LAST_30_DAYS,
+                        onClick = {
+                            haptics.tick()
+                            viewModel.selectPeriod(InsightsPeriod.LAST_30_DAYS)
+                        },
+                        label = { Text(stringResource(R.string.last_30_days)) },
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = state.period == InsightsPeriod.CUSTOM,
+                        onClick = {
+                            haptics.tick()
+                            viewModel.selectPeriod(InsightsPeriod.CUSTOM)
+                        },
+                        label = { Text(stringResource(R.string.custom_range)) },
+                    )
+                }
             }
-        }
-
-        item {
-            FilterChip(
-                selected = state.period == InsightsPeriod.CUSTOM,
-                onClick = { viewModel.selectPeriod(InsightsPeriod.CUSTOM) },
-                label = { Text(stringResource(R.string.custom_range)) },
-            )
         }
 
         if (state.period == InsightsPeriod.CUSTOM) {
@@ -108,6 +124,8 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
 
         item { PeriodSummaryCard(insights) }
 
+        item { EnergyTrendChartCard(insights) }
+
         item {
             SectionCard(title = stringResource(R.string.spend_by_dimension)) {
                 val spendDimensions = insights.byDimension.filter { it.spend > 0 }
@@ -120,7 +138,10 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
                             spend = true,
                             color = colors.spend,
                             selected = summary.dimension.id == state.selectedDimensionId,
-                            onClick = { viewModel.toggleDimensionFilter(summary.dimension.id) },
+                            onClick = {
+                                haptics.tick()
+                                viewModel.toggleDimensionFilter(summary.dimension.id)
+                            },
                         )
                     }
                 }
@@ -139,7 +160,10 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
                             spend = false,
                             color = colors.gain,
                             selected = summary.dimension.id == state.selectedDimensionId,
-                            onClick = { viewModel.toggleDimensionFilter(summary.dimension.id) },
+                            onClick = {
+                                haptics.tick()
+                                viewModel.toggleDimensionFilter(summary.dimension.id)
+                            },
                         )
                     }
                 }
@@ -191,8 +215,9 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
 
         item {
             SectionCard(title = stringResource(R.string.by_time_slot)) {
+                val showAverage = insights.startDate != insights.endDate
                 insights.byTimeSlot.forEach { summary ->
-                    TimeSlotRow(summary)
+                    TimeSlotRow(summary, showAverage = showAverage)
                 }
             }
         }
@@ -214,26 +239,41 @@ private fun PeriodSummaryCard(insights: PeriodInsights) {
                     EnergyFormatter.formatDate(insights.endDate),
                 style = MaterialTheme.typography.labelMedium,
                 color = colors.onSurfaceMuted,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
             )
-            Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                SummaryValue(stringResource(R.string.total_gain), EnergyFormatter.formatGainTotal(insights.totalGain), colors.gain)
-                SummaryValue(stringResource(R.string.total_spend), EnergyFormatter.formatSpendTotal(insights.totalSpend), colors.spend)
+            Row(modifier = Modifier.fillMaxWidth()) {
+                SummaryValue(
+                    stringResource(R.string.total_gain),
+                    EnergyFormatter.formatGainTotal(insights.totalGain),
+                    colors.gain,
+                    Modifier.weight(1f),
+                )
+                SummaryValue(
+                    stringResource(R.string.total_spend),
+                    EnergyFormatter.formatSpendTotal(insights.totalSpend),
+                    colors.spend,
+                    Modifier.weight(1f),
+                )
                 SummaryValue(
                     stringResource(R.string.net_balance),
                     EnergyFormatter.formatNetBalance(insights.netBalance),
                     colors.net,
+                    Modifier.weight(1f),
                 )
             }
-            Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.fillMaxWidth()) {
                 SummaryValue(
                     stringResource(R.string.average_daily_net),
                     EnergyFormatter.formatNetBalance(insights.averageDailyNet),
                     colors.net,
+                    Modifier.weight(1f),
                 )
                 SummaryValue(
                     stringResource(R.string.active_days),
                     insights.activeDaysCount.toString(),
                     colors.onSurfaceMuted,
+                    Modifier.weight(1f),
                 )
             }
         }
@@ -241,18 +281,28 @@ private fun PeriodSummaryCard(insights: PeriodInsights) {
 }
 
 @Composable
-private fun SummaryValue(label: String, value: String, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun SummaryValue(
+    label: String,
+    value: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             color = LocalEmpathieColors.current.onSurfaceMuted,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
             fontWeight = FontWeight.Bold,
             color = color,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
     }
 }
@@ -337,23 +387,62 @@ private fun DimensionBar(
 }
 
 @Composable
-private fun TimeSlotRow(summary: TimeSlotImpactSummary) {
+private fun TimeSlotRow(summary: TimeSlotImpactSummary, showAverage: Boolean) {
     val context = LocalContext.current
     val colors = LocalEmpathieColors.current
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    val netColor = when {
+        summary.netBalance > 0 -> colors.gain
+        summary.netBalance < 0 -> colors.spend
+        else -> colors.net
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
         Text(
             text = timeSlotLabel(context, summary.timeSlot),
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = EnergyFormatter.formatGainTotal(summary.totalGain) + " / " +
-                EnergyFormatter.formatSpendTotal(summary.totalSpend) + "  ·  " +
-                EnergyFormatter.formatNetBalance(summary.netBalance) + "  ·  " +
-                EnergyFormatter.formatNetBalance(summary.averageNetPerActiveDay) +
-                context.getString(R.string.per_day),
+            text = EnergyFormatter.formatGainTotal(summary.totalGain),
+            style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+            color = colors.gain,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            modifier = Modifier.width(38.dp),
+        )
+        Text(
+            text = " / ",
             style = MaterialTheme.typography.labelSmall,
             color = colors.onSurfaceMuted,
         )
+        Text(
+            text = EnergyFormatter.formatSpendTotal(summary.totalSpend),
+            style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+            color = colors.spend,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            modifier = Modifier.width(42.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = EnergyFormatter.formatNetBalance(summary.netBalance),
+            style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+            fontWeight = FontWeight.Bold,
+            color = netColor,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            modifier = Modifier.width(42.dp),
+        )
+        if (showAverage) {
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = EnergyFormatter.formatNetBalance(summary.averageNetPerActiveDay) +
+                    context.getString(R.string.per_day),
+                style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+                color = colors.onSurfaceMuted,
+                textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                modifier = Modifier.width(62.dp),
+            )
+        }
     }
 }
