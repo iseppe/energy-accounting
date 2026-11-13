@@ -15,7 +15,7 @@ One of four fixed chronological divisions of a Daily Account: `Early Morning`, `
 _Avoid_: Period, shift, timestamp
 
 **Entry**:
-A single atomic energy record logged within a Time Slot on a Daily Account, consisting of an Activity, an optional Situational Note, a Direction, an Energy Value, one Primary Dimension, and optional Secondary Dimensions.
+A single atomic energy record logged within a Time Slot on a Daily Account, consisting of an Activity, an optional Situational Note, a Direction, an Energy Value, and one Energy Dimension.
 _Avoid_: Transaction, event, item, row
 
 **Direction**:
@@ -23,7 +23,7 @@ Whether an Entry represents an energy withdrawal (`Spend (-)`) or an energy depo
 _Avoid_: Polarity, sign, type
 
 **Energy Value**:
-The magnitude of an Entry's energy impact, expressed as an integer from `1` to `100` (commonly adjusted in increments of 10).
+The magnitude of an Entry's energy impact, expressed as an integer from `1` to `100` (adjusted in increments of 5 via slider or stepper buttons).
 _Avoid_: Score, points, weight, amount
 
 **Net Balance**:
@@ -41,22 +41,14 @@ An optional short note on a specific Entry capturing one-off context or deviatio
 _Avoid_: Comment, memo, sub-activity
 
 **Activity Template**:
-A reusable blueprint learned from previously logged Activities (or pinned by the user) that pre-fills default Direction, Energy Value, Primary Dimension, and Secondary Dimensions without being overwritten by one-off daily adjustments.
+A reusable blueprint learned from previously logged Activities (or pinned by the user) that pre-fills default Direction, Energy Value, and Energy Dimension without being overwritten by one-off daily adjustments.
 _Avoid_: Preset, shortcut, favorite
 
 ### Dimensions & Reminders
 
 **Energy Dimension**:
-A domain of human functioning impacted by an Entry—defaulting to `Physical`, `Cognitive`, `Sensory`, `Social`, and `Emotional`, and extensible with user-defined dimensions.
-_Avoid_: Category, tag, spend type
-
-**Primary Dimension**:
-The single mandatory Energy Dimension on an Entry that receives 100% of the Entry's Energy Value in proportional breakdowns so daily and weekly summaries never double-count.
-_Avoid_: Main category, primary tag
-
-**Secondary Dimension**:
-Zero or more additional Energy Dimensions attached to an Entry to capture overlapping demands for filtering and occurrence analysis without inflating proportional totals.
-_Avoid_: Sub-category, secondary tag
+The single domain of human functioning impacted by an Entry—defaulting to `Physical`, `Cognitive`, `Sensory`, `Social`, and `Emotional`, and extensible with user-defined dimensions. Each Entry attributes 100% of its Energy Value to its selected Energy Dimension.
+_Avoid_: Category, tag, spend type, primary dimension, secondary dimension
 
 **Check-in Reminder**:
 A scheduled, purely local device notification tied to a Time Slot that prompts the user to log Entries and automatically suppresses itself if that Time Slot already has Entries logged for the day.
