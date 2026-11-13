@@ -203,7 +203,7 @@ internal fun AddEditEntrySheet(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    dimensions.forEach { dimension ->
+                    visibleDimensions(dimensions, draft.selectedDimensionId).forEach { dimension ->
                         DimensionPill(
                             label = dimensionLabel(context, dimension),
                             selected = draft.selectedDimensionId == dimension.id,
@@ -437,3 +437,14 @@ private fun DimensionPill(
 }
 
 private const val MAX_VISIBLE_TEMPLATES = 5
+
+/**
+ * New entries only offer active dimensions, while editing keeps the draft's own archived
+ * dimension visible so its selection is never silently hidden.
+ */
+internal fun visibleDimensions(
+    dimensions: List<EnergyDimension>,
+    selectedDimensionId: Long?,
+): List<EnergyDimension> = dimensions.filter { dimension ->
+    !dimension.isArchived || dimension.id == selectedDimensionId
+}

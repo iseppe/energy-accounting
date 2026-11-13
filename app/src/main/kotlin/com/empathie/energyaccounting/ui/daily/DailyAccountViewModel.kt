@@ -85,7 +85,7 @@ class DailyAccountViewModel(
             initialValue = DailyAccount.fromEntries(today, emptyList()),
         )
 
-    val dimensions: StateFlow<List<EnergyDimension>> = repo.observeActiveDimensions()
+    val dimensions: StateFlow<List<EnergyDimension>> = repo.observeAllDimensions()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val templates: StateFlow<List<ActivityTemplate>> = repo.observeTemplates()

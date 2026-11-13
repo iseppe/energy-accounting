@@ -78,6 +78,7 @@
     <string name="spend_by_dimension">Consumo per dimensione</string>
     <string name="gain_by_dimension">Guadagno per dimensione</string>
     <string name="by_time_slot">Per fascia oraria</string>
+    <string name="per_day">/giorno</string>
 
     <!-- Manage & Export -->
     <string name="activity_templates">Modelli di attività</string>

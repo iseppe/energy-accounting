@@ -21,6 +21,8 @@ class AppSettings(context: Context) {
 
     fun themeMode(): ThemeMode {
         val stored = preferences.getString(KEY_THEME_MODE, null) ?: return ThemeMode.SYSTEM
+        // v0.1.0 persisted the old enum name; keep that user's choice after the rename.
+        if (stored == "WARM_LIGHT") return ThemeMode.LIGHT
         return ThemeMode.entries.firstOrNull { it.name == stored } ?: ThemeMode.SYSTEM
     }
 

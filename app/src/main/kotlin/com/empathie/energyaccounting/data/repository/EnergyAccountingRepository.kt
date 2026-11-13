@@ -1,6 +1,7 @@
 package com.empathie.energyaccounting.data.repository
 
 import androidx.room.withTransaction
+import com.empathie.energyaccounting.data.diagnostics.AppLogger
 import com.empathie.energyaccounting.data.local.EnergyAccountingDatabase
 import com.empathie.energyaccounting.data.local.entity.ActivityTemplateEntity
 import com.empathie.energyaccounting.data.local.entity.EnergyDimensionEntity
@@ -103,7 +104,7 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
      */
     suspend fun saveEntry(entry: Entry, updateTemplateDefaults: Boolean = false): Long =
         db.withTransaction {
-            if (entry.id == 0L) {
+            val savedId = if (entry.id == 0L) {
                 val newId = dao.insertEntry(entry.toEntity())
                 touchTemplate(entry, incrementUsage = true, updateDefaults = updateTemplateDefaults)
                 newId
@@ -114,10 +115,16 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
                 }
                 entry.id
             }
+            AppLogger.info(
+                "Repository",
+                "Saved entry $savedId (${entry.date} ${entry.timeSlot.name}, ${entry.dimension.name})",
+            )
+            savedId
         }
 
     suspend fun deleteEntry(entryId: Long) {
         dao.deleteEntryById(entryId)
+        AppLogger.info("Repository", "Deleted entry $entryId")
     }
 
     suspend fun createCustomDimension(name: String, colorIndex: Int): Long {
@@ -134,7 +141,9 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
                 systemKey = null,
                 colorIndex = colorIndex,
             )
-        )
+        ).also { newId ->
+            AppLogger.info("Repository", "Created custom dimension $newId ('$trimmed')")
+        }
     }
 
     /**
@@ -151,8 +160,10 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
 
             if (usedByEntries || usedByTemplates) {
                 dao.updateDimension(dimension.copy(isArchived = true))
+                AppLogger.info("Repository", "Archived custom dimension ${dimension.id}")
             } else {
                 dao.deleteCustomDimension(dimensionId)
+                AppLogger.info("Repository", "Deleted unused custom dimension ${dimension.id}")
             }
         }
     }
@@ -160,18 +171,24 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
     suspend fun saveTemplate(template: ActivityTemplate): Long = db.withTransaction {
         val existing = dao.findTemplateByNormalizedName(template.normalizedName)
         if (existing != null && existing.id != template.id) {
+            AppLogger.error(
+                "Repository",
+                "Rejected duplicate template '${template.activityName}'",
+            )
             throw IllegalArgumentException(
                 "A template for '${template.activityName}' already exists"
             )
         }
 
         val entity = template.toEntity()
-        if (template.id == 0L) {
+        val savedId = if (template.id == 0L) {
             dao.insertTemplate(entity)
         } else {
             dao.updateTemplate(entity)
             template.id
         }
+        AppLogger.info("Repository", "Saved template $savedId ('${template.activityName}')")
+        savedId
     }
 
     suspend fun toggleTemplatePin(templateId: Long, isPinned: Boolean) {

@@ -1,9 +1,14 @@
 package com.empathie.energyaccounting.reminder
 
+import android.app.Notification
+import android.app.NotificationManager
+import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.empathie.energyaccounting.data.local.EnergyAccountingDatabase
 import com.empathie.energyaccounting.data.local.entity.EntryEntity
+import com.empathie.energyaccounting.data.settings.AppLanguage
+import com.empathie.energyaccounting.data.settings.AppSettings
 import com.empathie.energyaccounting.domain.model.Direction
 import com.empathie.energyaccounting.domain.model.TimeSlot
 import kotlinx.coroutines.flow.first
@@ -14,6 +19,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -68,5 +74,21 @@ class CheckInReminderReceiverTest {
 
         assertEquals(now.withHour(17).withMinute(30).toInstant().toEpochMilli(), todayAt1730)
         assertEquals(now.plusDays(1).withHour(9).withMinute(30).toInstant().toEpochMilli(), tomorrowAt0930)
+    }
+
+    @Test
+    fun `test notification follows the in-app language`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        AppSettings(context).setAppLanguage(AppLanguage.ITALIAN)
+
+        val posted = CheckInReminderReceiver.postTestNotification(context, TimeSlot.EVENING)
+
+        assertTrue(posted)
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val text = shadowOf(manager).allNotifications.last()
+            .extras.getString(Notification.EXTRA_TEXT)
+
+        assertNotNull(text)
+        assertTrue(text!!.contains("Sera"))
     }
 }

@@ -78,6 +78,7 @@
     <string name="spend_by_dimension">Spend by dimension</string>
     <string name="gain_by_dimension">Gain by dimension</string>
     <string name="by_time_slot">By time slot</string>
+    <string name="per_day">/day</string>
 
     <!-- Manage & Export -->
     <string name="activity_templates">Activity Templates</string>

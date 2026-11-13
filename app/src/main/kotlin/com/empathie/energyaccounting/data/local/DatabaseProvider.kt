@@ -23,6 +23,7 @@ object DatabaseProvider {
                 DATABASE_NAME,
             )
                 .addMigrations(EnergyAccountingDatabase.MIGRATION_1_2)
+                .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
                 .build()
                 .also { instance = it }
         }

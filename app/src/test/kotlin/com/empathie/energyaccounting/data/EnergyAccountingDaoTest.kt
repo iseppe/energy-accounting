@@ -87,7 +87,7 @@ class EnergyAccountingDaoTest {
                 .build()
         )
         val supportDb = helper.writableDatabase
-        supportDb.execSQL("PRAGMA foreign_keys=OFF")
+        supportDb.execSQL("PRAGMA foreign_keys=ON")
 
         supportDb.execSQL(
             "CREATE TABLE `energy_dimensions` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
@@ -108,8 +108,11 @@ class EnergyAccountingDaoTest {
 
         supportDb.execSQL(
             "CREATE TABLE `entry_secondary_dimensions` (`entryId` INTEGER NOT NULL, " +
-                "`dimensionId` INTEGER NOT NULL, PRIMARY KEY(`entryId`, `dimensionId`))"
+                "`dimensionId` INTEGER NOT NULL, PRIMARY KEY(`entryId`, `dimensionId`), " +
+                "FOREIGN KEY(`entryId`) REFERENCES `entries`(`id`) ON DELETE CASCADE, " +
+                "FOREIGN KEY(`dimensionId`) REFERENCES `energy_dimensions`(`id`) ON DELETE CASCADE)"
         )
+        supportDb.execSQL("INSERT INTO `entry_secondary_dimensions` VALUES (10, 1)")
 
         supportDb.execSQL(
             "CREATE TABLE `activity_templates` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +

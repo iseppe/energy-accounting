@@ -148,6 +148,11 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                         ExportKind.JSON -> viewModel.buildJson()
                         ExportKind.DEBUG_LOG -> viewModel.buildDebugLog(
                             buildId = BuildConfig.BUILD_ID,
+                            packageName = BuildConfig.APPLICATION_ID,
+                            versionName = BuildConfig.VERSION_NAME,
+                            versionCode = BuildConfig.VERSION_CODE,
+                            sdkInt = Build.VERSION.SDK_INT,
+                            deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}",
                             localeTag = Locale.getDefault().toLanguageTag(),
                             themeName = themeMode.name,
                         )

@@ -13,6 +13,8 @@ import com.empathie.energyaccounting.R
 import com.empathie.energyaccounting.data.diagnostics.AppLogger
 import com.empathie.energyaccounting.data.local.DatabaseProvider
 import com.empathie.energyaccounting.data.local.EnergyAccountingDao
+import com.empathie.energyaccounting.data.settings.AppSettings
+import com.empathie.energyaccounting.data.settings.LocaleHelper
 import com.empathie.energyaccounting.domain.model.CheckInReminder
 import com.empathie.energyaccounting.domain.model.TimeSlot
 import kotlinx.coroutines.CoroutineScope
@@ -41,9 +43,11 @@ class CheckInReminderReceiver : BroadcastReceiver() {
                 val today = LocalDate.now()
 
                 if (shouldPostNotification(dao, today, timeSlot)) {
-                    runCatching { postNotification(context, timeSlot) }
+                    runCatching { postNotification(localizedContext(context), timeSlot) }
+                        .onSuccess {
+                            AppLogger.info("Reminder", "Posted check-in notification for ${timeSlot.name}")
+                        }
                         .onFailure { AppLogger.error("Reminder", "notification failed", it) }
-                    AppLogger.info("Reminder", "Posted check-in notification for ${timeSlot.name}")
                 } else {
                     AppLogger.info("Reminder", "Suppressed ${timeSlot.name}: entries already logged")
                 }
@@ -92,27 +96,36 @@ class CheckInReminderReceiver : BroadcastReceiver() {
          * disabled for the app.
          */
         fun postTestNotification(context: Context, timeSlot: TimeSlot): Boolean {
-            ensureNotificationChannel(context)
+            val localized = localizedContext(context)
+            ensureNotificationChannel(localized)
             if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return false
-            postNotification(context, timeSlot)
+            postNotification(localized, timeSlot)
             return true
         }
 
         fun ensureNotificationChannel(context: Context) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+            val localized = localizedContext(context)
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if (manager.getNotificationChannel(NOTIFICATION_CHANNEL_ID) != null) return
 
             val channel = NotificationChannel(
                 NOTIFICATION_CHANNEL_ID,
-                context.getString(R.string.notification_channel_name),
+                localized.getString(R.string.notification_channel_name),
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
-                description = context.getString(R.string.notification_channel_description)
+                description = localized.getString(R.string.notification_channel_description)
                 setShowBadge(false)
             }
             manager.createNotificationChannel(channel)
         }
+
+        /**
+         * Notification text must follow the in-app language, because a broadcast receiver
+         * has no Activity context carrying the wrapped configuration.
+         */
+        private fun localizedContext(context: Context): Context =
+            LocaleHelper.wrap(context, AppSettings(context).appLanguage())
 
         private fun postNotification(context: Context, timeSlot: TimeSlot) {
             ensureNotificationChannel(context)

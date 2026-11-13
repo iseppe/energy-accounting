@@ -216,8 +216,8 @@ private fun PeriodSummaryCard(insights: PeriodInsights) {
                 color = colors.onSurfaceMuted,
             )
             Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                SummaryValue(stringResource(R.string.total_gain), "+${insights.totalGain}", colors.gain)
-                SummaryValue(stringResource(R.string.total_spend), "-${insights.totalSpend}", colors.spend)
+                SummaryValue(stringResource(R.string.total_gain), EnergyFormatter.formatGainTotal(insights.totalGain), colors.gain)
+                SummaryValue(stringResource(R.string.total_spend), EnergyFormatter.formatSpendTotal(insights.totalSpend), colors.spend)
                 SummaryValue(
                     stringResource(R.string.net_balance),
                     EnergyFormatter.formatNetBalance(insights.netBalance),
@@ -347,9 +347,11 @@ private fun TimeSlotRow(summary: TimeSlotImpactSummary) {
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = "+${summary.totalGain} / -${summary.totalSpend}  ·  " +
+            text = EnergyFormatter.formatGainTotal(summary.totalGain) + " / " +
+                EnergyFormatter.formatSpendTotal(summary.totalSpend) + "  ·  " +
                 EnergyFormatter.formatNetBalance(summary.netBalance) + "  ·  " +
-                EnergyFormatter.formatNetBalance(summary.averageNetPerActiveDay) + "/day",
+                EnergyFormatter.formatNetBalance(summary.averageNetPerActiveDay) +
+                context.getString(R.string.per_day),
             style = MaterialTheme.typography.labelSmall,
             color = colors.onSurfaceMuted,
         )

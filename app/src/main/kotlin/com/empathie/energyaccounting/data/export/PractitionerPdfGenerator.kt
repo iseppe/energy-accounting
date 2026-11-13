@@ -180,7 +180,12 @@ private class PdfReportBuilder(private val labels: PdfLabels) {
             labels.columnValue,
         )
         columnTitles.forEachIndexed { index, title ->
-            drawText(title, x + CELL_PADDING, top - 12.5f, size = 8f, bold = true)
+            val textX = if (index == VALUE_COLUMN_INDEX) {
+                x + COLUMN_WIDTHS[index] - CELL_PADDING - approxTextWidth(title, 8f)
+            } else {
+                x + CELL_PADDING
+            }
+            drawText(title, textX, top - 12.5f, size = 8f, bold = true)
             x += COLUMN_WIDTHS[index]
         }
         drawTableBorders(top, HEADER_HEIGHT)
@@ -199,9 +204,14 @@ private class PdfReportBuilder(private val labels: PdfLabels) {
         var x = MARGIN_LEFT
         cellLines.forEachIndexed { index, lines ->
             lines.forEachIndexed { lineIndex, line ->
+                val textX = if (index == VALUE_COLUMN_INDEX) {
+                    x + COLUMN_WIDTHS[index] - CELL_PADDING - approxTextWidth(line, 8f)
+                } else {
+                    x + CELL_PADDING
+                }
                 drawText(
                     line,
-                    x + CELL_PADDING,
+                    textX,
                     top - CELL_PADDING - 7f - lineIndex * CELL_LINE_HEIGHT,
                     size = 8f,
                 )
@@ -328,7 +338,10 @@ private class PdfReportBuilder(private val labels: PdfLabels) {
     }
 
     private fun charsForWidth(width: Float): Int =
-        ((width - CELL_PADDING * 2) / (FONT_SIZE * 0.5f)).toInt().coerceAtLeast(4)
+        ((width - CELL_PADDING * 2) / (FONT_SIZE * 0.54f)).toInt().coerceAtLeast(4)
+
+    private fun approxTextWidth(text: String, size: Float): Float =
+        text.length * size * 0.5f
 
     private fun wrapWords(text: String, maxChars: Int): List<String> {
         val result = mutableListOf<String>()
@@ -420,8 +433,9 @@ private class PdfReportBuilder(private val labels: PdfLabels) {
         const val MAX_CHARS = 100
 
         const val FIRST_PAGE_OBJECT = 5
+        const val VALUE_COLUMN_INDEX = 3
 
-        val COLUMN_WIDTHS = listOf(92f, 250f, 86f, 103f)
+        val COLUMN_WIDTHS = listOf(115f, 230f, 95f, 75f)
         val TABLE_WIDTH = COLUMN_WIDTHS.sum()
     }
 }

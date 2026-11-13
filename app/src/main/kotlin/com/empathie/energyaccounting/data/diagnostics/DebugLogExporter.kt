@@ -14,6 +14,11 @@ class DebugLogExporter(private val db: EnergyAccountingDatabase) {
 
     suspend fun buildLogReport(
         buildId: String,
+        packageName: String,
+        versionName: String,
+        versionCode: Int,
+        sdkInt: Int,
+        deviceModel: String,
         localeTag: String,
         themeName: String,
     ): String {
@@ -26,6 +31,10 @@ class DebugLogExporter(private val db: EnergyAccountingDatabase) {
         return buildString {
             appendLine("Empathie Energy Accounting - debug log")
             appendLine("Build: $buildId")
+            appendLine("Package: $packageName")
+            appendLine("Version: $versionName ($versionCode)")
+            appendLine("Android SDK: $sdkInt")
+            appendLine("Device: $deviceModel")
             appendLine("Locale: $localeTag")
             appendLine("Theme: $themeName")
             appendLine("Generated: ${OffsetDateTime.now()}")

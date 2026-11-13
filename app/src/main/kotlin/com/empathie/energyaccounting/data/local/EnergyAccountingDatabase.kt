@@ -80,6 +80,10 @@ abstract class EnergyAccountingDatabase : RoomDatabase() {
          */
         val MIGRATION_1_2: Migration = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
+                // Drop the child table first: it has a CASCADE foreign key to entries, and
+                // dropping the parent before the child fails when foreign keys are enabled.
+                db.execSQL("DROP TABLE IF EXISTS `entry_secondary_dimensions`")
+
                 db.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS `entries_new` (
@@ -114,7 +118,6 @@ abstract class EnergyAccountingDatabase : RoomDatabase() {
                     "CREATE INDEX IF NOT EXISTS `index_entries_dateIso_timeSlot` " +
                         "ON `entries` (`dateIso`, `timeSlot`)"
                 )
-                db.execSQL("DROP TABLE IF EXISTS `entry_secondary_dimensions`")
 
                 db.execSQL(
                     """

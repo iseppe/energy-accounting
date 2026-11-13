@@ -2,6 +2,7 @@ package com.empathie.energyaccounting.ui.manage
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.empathie.energyaccounting.data.diagnostics.AppLogger
 import com.empathie.energyaccounting.data.diagnostics.DebugLogExporter
 import com.empathie.energyaccounting.data.export.BackupSerializer
 import com.empathie.energyaccounting.data.export.CsvExporter
@@ -87,6 +88,7 @@ class ManageExportViewModel(
     }
 
     fun reportExportFailure() {
+        AppLogger.error("Export", "Export or file operation failed")
         _message.value = ManageMessage.EXPORT_FAILED
     }
 
@@ -104,7 +106,11 @@ class ManageExportViewModel(
 
     suspend fun saveTemplate(template: ActivityTemplate) {
         runCatching { repo.saveTemplate(template) }
-            .onFailure { _message.value = ManageMessage.TEMPLATE_NAME_IN_USE }
+            .onSuccess { AppLogger.info("Manage", "Saved template '${template.activityName}'") }
+            .onFailure {
+                AppLogger.error("Manage", "Template save rejected for '${template.activityName}'", it)
+                _message.value = ManageMessage.TEMPLATE_NAME_IN_USE
+            }
     }
 
     suspend fun addCustomDimension(name: String) {
@@ -124,6 +130,11 @@ class ManageExportViewModel(
     suspend fun updateReminder(reminder: CheckInReminder) {
         repo.updateReminder(reminder)
         reminderScheduler.scheduleOrCancel(reminder)
+        AppLogger.info(
+            "Reminder",
+            "Updated ${reminder.timeSlot.name} to %02d:%02d enabled=${reminder.isEnabled}"
+                .format(reminder.hour, reminder.minute),
+        )
     }
 
     suspend fun buildCsv(
@@ -161,10 +172,24 @@ class ManageExportViewModel(
 
     suspend fun buildDebugLog(
         buildId: String,
+        packageName: String,
+        versionName: String,
+        versionCode: Int,
+        sdkInt: Int,
+        deviceModel: String,
         localeTag: String,
         themeName: String,
     ): ByteArray = withContext(Dispatchers.IO) {
-        debugLogExporter.buildLogReport(buildId, localeTag, themeName).toByteArray()
+        debugLogExporter.buildLogReport(
+            buildId = buildId,
+            packageName = packageName,
+            versionName = versionName,
+            versionCode = versionCode,
+            sdkInt = sdkInt,
+            deviceModel = deviceModel,
+            localeTag = localeTag,
+            themeName = themeName,
+        ).toByteArray()
     }
 
     suspend fun restore(json: String, mode: RestoreMode) {
@@ -173,6 +198,9 @@ class ManageExportViewModel(
         }
         result.onSuccess { reminders ->
             reminders.forEach { reminder -> reminderScheduler.scheduleOrCancel(reminder) }
+            AppLogger.info("Restore", "Restored ${reminders.size} reminders in $mode mode")
+        }.onFailure {
+            AppLogger.error("Restore", "Restore failed in $mode mode", it)
         }
         _message.value = if (result.isSuccess) {
             ManageMessage.RESTORE_COMPLETE

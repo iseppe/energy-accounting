@@ -2,6 +2,7 @@ package com.empathie.energyaccounting.data
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.empathie.energyaccounting.data.diagnostics.DebugLogExporter
 import com.empathie.energyaccounting.data.export.BackupPayload
 import com.empathie.energyaccounting.data.export.BackupSerializer
 import com.empathie.energyaccounting.data.export.CsvExporter
@@ -288,5 +289,27 @@ class ExportAndBackupTest {
         assertTrue(evening.isEnabled)
         assertEquals(21, evening.hour)
         assertEquals(30, evening.minute)
+    }
+
+    @Test
+    fun `DebugLogExporter includes device, build and database metadata`() = runTest {
+        val report = DebugLogExporter(db1).buildLogReport(
+            buildId = "v0.2.0-abc1234-20261113-0100",
+            packageName = "com.empathie.energyaccounting",
+            versionName = "0.2.0",
+            versionCode = 2,
+            sdkInt = 35,
+            deviceModel = "Google Pixel 7",
+            localeTag = "it-IT",
+            themeName = "LIGHT",
+        )
+
+        assertTrue(report.contains("v0.2.0-abc1234-20261113-0100"))
+        assertTrue(report.contains("Package: com.empathie.energyaccounting"))
+        assertTrue(report.contains("Version: 0.2.0 (2)"))
+        assertTrue(report.contains("Android SDK: 35"))
+        assertTrue(report.contains("Device: Google Pixel 7"))
+        assertTrue(report.contains("Locale: it-IT"))
+        assertTrue(report.contains("dimensions: 5"))
     }
 }
