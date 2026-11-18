@@ -22,8 +22,7 @@ import java.util.Locale
 /**
  * Versioned JSON backup of every local table, plus the restore engine.
  *
- * Exports `schemaVersion = 2` (single dimension). Restore accepts both v1 backups
- * (`primaryDimensionId`, `defaultPrimaryDimensionId`, secondary dimension lists) and v2
+ * Exports schema version 3 with per-slot ordering. Restore also accepts v1 and v2
  * backups, remapping every dimension reference onto the local database.
  */
 class BackupSerializer(private val db: EnergyAccountingDatabase) {
@@ -68,6 +67,7 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
                     energyValue = it.entry.energyValue,
                     dimensionId = it.entry.dimensionId,
                     createdAtEpochMillis = it.entry.createdAtEpochMillis,
+                    positionInSlot = it.entry.positionInSlot,
                 )
             },
             reminders = dao.getReminderSchedules().map {
@@ -96,7 +96,12 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
 
             val idMap = remapDimensions(payload.dimensions, mode)
             insertTemplates(payload.templates, idMap)
-            insertEntries(payload.entries, idMap, deduplicate = mode == RestoreMode.MERGE)
+            insertEntries(
+                payload.entries,
+                idMap,
+                deduplicate = mode == RestoreMode.MERGE,
+                hasPositions = payload.schemaVersion >= 3,
+            )
             applyReminders(payload.reminders)
         }
     }
@@ -106,8 +111,8 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
         val version = root["schemaVersion"]?.jsonPrimitive?.intOrNull ?: 1
 
         return when (version) {
-            1 -> json.decodeFromString(V1BackupPayload.serializer(), jsonString).toCurrent()
-            2 -> json.decodeFromString(BackupPayload.serializer(), jsonString)
+            1 -> json.decodeFromString(V1BackupPayload.serializer(), jsonString).toCurrent().copy(schemaVersion = 1)
+            2, 3 -> json.decodeFromString(BackupPayload.serializer(), jsonString)
             else -> throw IllegalArgumentException("Unsupported backup schema version $version")
         }
     }
@@ -120,6 +125,7 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
         val timeSlotNames = TimeSlot.entries.map { it.name }.toSet()
         val directionNames = Direction.entries.map { it.name }.toSet()
         val systemKeys = SystemDimensionKey.entries.map { it.name }.toSet()
+        val dimensionIds = payload.dimensions.map { it.id }.toSet()
 
         payload.dimensions.forEach { record ->
             require(record.name.isNotBlank()) { "Dimension name must not be blank" }
@@ -130,6 +136,7 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
 
         payload.templates.forEach { record ->
             require(record.displayName.isNotBlank()) { "Template name must not be blank" }
+            require(record.defaultDimensionId in dimensionIds) { "Template references a missing dimension" }
             require(record.defaultDirection in directionNames) {
                 "Unknown direction: ${record.defaultDirection}"
             }
@@ -139,6 +146,7 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
         }
 
         payload.entries.forEach { record ->
+            require(record.dimensionId in dimensionIds) { "Entry references a missing dimension" }
             require(runCatching { LocalDate.parse(record.dateIso) }.isSuccess) {
                 "Invalid entry date: ${record.dateIso}"
             }
@@ -148,6 +156,11 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
                 "Entry energy value out of range: ${record.energyValue}"
             }
             require(record.activity.isNotBlank()) { "Entry activity must not be blank" }
+            if (payload.schemaVersion >= 3) {
+                require(record.positionInSlot != null && record.positionInSlot >= 0L) {
+                    "Entry position must be a non-negative integer"
+                }
+            }
         }
 
         payload.reminders.forEach { record ->
@@ -235,6 +248,7 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
         records: List<EntryRecord>,
         idMap: Map<Long, Long>,
         deduplicate: Boolean,
+        hasPositions: Boolean,
     ) {
         val dao = db.dao()
         val existingKeys = if (deduplicate) {
@@ -243,7 +257,14 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
             mutableSetOf()
         }
 
-        records.forEach { record ->
+        val ordered = records.sortedWith(
+            compareBy<EntryRecord>(
+                { it.dateIso },
+                { it.timeSlot },
+                { if (hasPositions) it.positionInSlot ?: 0L else it.createdAtEpochMillis },
+            )
+        )
+        ordered.forEach { record ->
             val dimensionId = idMap[record.dimensionId] ?: return@forEach
 
             val entity = EntryEntity(
@@ -259,7 +280,8 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
 
             if (deduplicate && !existingKeys.add(entity.naturalKey())) return@forEach
 
-            dao.insertEntry(entity)
+            val position = dao.nextPositionForSlot(record.dateIso, record.timeSlot)
+            dao.insertEntry(entity.copy(positionInSlot = position))
         }
     }
 
@@ -302,7 +324,7 @@ class BackupSerializer(private val db: EnergyAccountingDatabase) {
     ).joinToString("|")
 
     companion object {
-        const val CURRENT_SCHEMA_VERSION = 2
+        const val CURRENT_SCHEMA_VERSION = 3
     }
 }
 
@@ -346,6 +368,7 @@ data class EntryRecord(
     val energyValue: Int,
     val dimensionId: Long,
     val createdAtEpochMillis: Long,
+    val positionInSlot: Long? = null,
 )
 
 @Serializable

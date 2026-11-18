@@ -1,5 +1,6 @@
 package com.empathie.energyaccounting.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -37,4 +38,5 @@ data class EntryEntity(
     val energyValue: Int,
     val dimensionId: Long,
     val createdAtEpochMillis: Long,
+    @ColumnInfo(defaultValue = "0") val positionInSlot: Long = 0L,
 )

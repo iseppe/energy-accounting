@@ -15,6 +15,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -35,13 +36,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,11 +62,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -133,6 +140,8 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
     var pendingRestoreMode by remember { mutableStateOf<RestoreMode?>(null) }
     var pendingEnableReminder by remember { mutableStateOf<CheckInReminder?>(null) }
     var selectedDevSlot by remember { mutableStateOf(TimeSlot.EARLY_MORNING) }
+    var templatesExpanded by rememberSaveable { mutableStateOf(false) }
+    var templateQuery by rememberSaveable { mutableStateOf("") }
 
     fun postTestNotification() {
         val posted = CheckInReminderReceiver.postTestNotification(
@@ -284,7 +293,8 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp)
+            .testTag("manage-list"),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 12.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -348,28 +358,64 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
             SectionCard(
                 title = stringResource(R.string.activity_templates),
                 action = {
-                    IconButton(
-                        onClick = {
-                            haptics.tick()
-                            showCreateTemplate = true
-                        },
-                        modifier = Modifier.size(32.dp),
-                    ) {
-                        Icon(
-                            Icons.Filled.Add,
-                            contentDescription = stringResource(R.string.create),
-                            modifier = Modifier.size(20.dp),
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = {
+                                haptics.tick()
+                                showCreateTemplate = true
+                            },
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(
+                                Icons.Filled.Add,
+                                contentDescription = stringResource(R.string.create),
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                haptics.tick()
+                                templatesExpanded = !templatesExpanded
+                            },
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(
+                                if (templatesExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                contentDescription = stringResource(
+                                    if (templatesExpanded) R.string.hide_templates else R.string.show_templates
+                                ),
+                            )
+                        }
                     }
                 },
             ) {
-                templates.forEach { template ->
-                    TemplateRow(
-                        template = template,
-                        onTogglePin = { scope.launch { viewModel.toggleTemplatePin(template) } },
-                        onEdit = { editingTemplate = template },
-                        onDelete = { scope.launch { viewModel.deleteTemplate(template) } },
+                if (templatesExpanded) {
+                    OutlinedTextField(
+                        value = templateQuery,
+                        onValueChange = { templateQuery = it },
+                        label = { Text(stringResource(R.string.search_templates)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
                     )
+                    val filtered = templates.filter { it.activityName.contains(templateQuery.trim(), ignoreCase = true) }
+                    if (filtered.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.no_matching_templates),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = LocalEmpathieColors.current.onSurfaceMuted,
+                        )
+                    } else {
+                        LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
+                            items(filtered, key = { it.id }) { template ->
+                                TemplateRow(
+                                    template = template,
+                                    onTogglePin = { scope.launch { viewModel.toggleTemplatePin(template) } },
+                                    onEdit = { editingTemplate = template },
+                                    onDelete = { scope.launch { viewModel.deleteTemplate(template) } },
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -798,6 +844,7 @@ private fun TemplateRow(
     val context = LocalContext.current
     val colors = LocalEmpathieColors.current
     val haptics = LocalAppHaptics.current
+    var menuExpanded by remember { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(template.activityName, style = MaterialTheme.typography.bodyMedium)
@@ -820,17 +867,23 @@ private fun TemplateRow(
                 ),
             )
         }
-        IconButton(onClick = {
-            haptics.tick()
-            onEdit()
-        }) {
-            Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.edit))
-        }
-        IconButton(onClick = {
-            haptics.tick()
-            onDelete()
-        }) {
-            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.delete))
+        Box {
+            IconButton(onClick = {
+                haptics.tick()
+                menuExpanded = true
+            }) {
+                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.template_options))
+            }
+            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.edit)) },
+                    onClick = { menuExpanded = false; haptics.tick(); onEdit() },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.delete)) },
+                    onClick = { menuExpanded = false; haptics.tick(); onDelete() },
+                )
+            }
         }
     }
 }

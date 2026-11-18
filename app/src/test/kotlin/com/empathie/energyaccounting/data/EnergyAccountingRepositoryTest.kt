@@ -38,6 +38,109 @@ class EnergyAccountingRepositoryTest {
         db.close()
     }
 
+    private suspend fun insertEntry(date: LocalDate, name: String, createdAt: Long, slot: TimeSlot = TimeSlot.LATE_MORNING): Long {
+        val dimension = repo.observeActiveDimensions().first().first()
+        return repo.saveEntry(
+            Entry(
+                date = date,
+                timeSlot = slot,
+                activity = name,
+                situationalNote = "note $name",
+                direction = Direction.SPEND,
+                energyValue = 10,
+                dimension = dimension,
+                createdAtEpochMillis = createdAt,
+            )
+        )
+    }
+
+    private suspend fun move(date: LocalDate, id: Long, slot: TimeSlot, index: Int): Boolean =
+        repo.moveEntry(date, id, slot, index)
+
+    @Test
+    fun `moving entries inserts within and across slots without changing their content or templates`() = runTest {
+        val date = LocalDate.of(2026, 11, 12)
+        val a = insertEntry(date, "A", 100L)
+        insertEntry(date, "B", 200L)
+        val c = insertEntry(date, "C", 300L)
+        val before = repo.observeDailyAccount(date).first()
+        val originalA = before.ledgerFor(TimeSlot.LATE_MORNING).entries.first { it.id == a }
+        val templates = repo.observeTemplates().first()
+
+        assertTrue(move(date, c, TimeSlot.LATE_MORNING, 0))
+        assertEquals(listOf("C", "A", "B"), repo.observeDailyAccount(date).first()
+            .ledgerFor(TimeSlot.LATE_MORNING).entries.map { it.activity })
+        assertTrue(move(date, a, TimeSlot.AFTERNOON, 0))
+
+        val after = repo.observeDailyAccount(date).first()
+        assertEquals(listOf("C", "B"), after.ledgerFor(TimeSlot.LATE_MORNING).entries.map { it.activity })
+        assertEquals(listOf("A"), after.ledgerFor(TimeSlot.AFTERNOON).entries.map { it.activity })
+        assertEquals(originalA.copy(timeSlot = TimeSlot.AFTERNOON, positionInSlot = 0),
+            after.ledgerFor(TimeSlot.AFTERNOON).entries.single())
+        assertEquals(-20, after.ledgerFor(TimeSlot.LATE_MORNING).netBalance)
+        assertEquals(-10, after.ledgerFor(TimeSlot.AFTERNOON).netBalance)
+        assertEquals(templates, repo.observeTemplates().first())
+    }
+
+    @Test
+    fun `invalid and no-op moves do not change the ledger`() = runTest {
+        val date = LocalDate.of(2026, 11, 12)
+        val a = insertEntry(date, "A", 100L)
+        insertEntry(date, "B", 200L)
+        val before = repo.observeDailyAccount(date).first()
+
+        assertFalse(move(date, 9999L, TimeSlot.AFTERNOON, 0))
+        assertFalse(move(date.plusDays(1), a, TimeSlot.AFTERNOON, 0))
+        assertFalse(move(date, a, TimeSlot.AFTERNOON, 1))
+        assertFalse(move(date, a, TimeSlot.LATE_MORNING, -1))
+        assertTrue(move(date, a, TimeSlot.LATE_MORNING, 0))
+        assertEquals(before, repo.observeDailyAccount(date).first())
+    }
+
+    @Test
+    fun `editing a reordered entry preserves its position and changing its slot appends it`() = runTest {
+        val date = LocalDate.of(2026, 11, 12)
+        val a = insertEntry(date, "A", 100L)
+        val b = insertEntry(date, "B", 200L)
+        insertEntry(date, "D", 50L, TimeSlot.AFTERNOON)
+        assertTrue(move(date, b, TimeSlot.LATE_MORNING, 0))
+
+        val reordered = repo.observeDailyAccount(date).first().ledgerFor(TimeSlot.LATE_MORNING).entries
+        repo.saveEntry(reordered.first { it.id == b }.copy(situationalNote = "edited"))
+        assertEquals(listOf("B", "A"), repo.observeDailyAccount(date).first()
+            .ledgerFor(TimeSlot.LATE_MORNING).entries.map { it.activity })
+
+        val entryA = repo.observeDailyAccount(date).first().ledgerFor(TimeSlot.LATE_MORNING).entries.first { it.id == a }
+        repo.saveEntry(entryA.copy(timeSlot = TimeSlot.AFTERNOON))
+        val afternoon = repo.observeDailyAccount(date).first().ledgerFor(TimeSlot.AFTERNOON).entries
+        assertEquals(listOf("D", "A"), afternoon.map { it.activity })
+        assertEquals(100L, afternoon.last().createdAtEpochMillis)
+    }
+
+    @Test
+    fun `new entries append within a slot even when their creation timestamps are out of order`() = runTest {
+        val date = LocalDate.of(2026, 11, 12)
+        val dimension = repo.observeActiveDimensions().first().first()
+        suspend fun insert(activity: String, createdAt: Long) = repo.saveEntry(
+            Entry(
+                date = date,
+                timeSlot = TimeSlot.LATE_MORNING,
+                activity = activity,
+                situationalNote = null,
+                direction = Direction.SPEND,
+                energyValue = 20,
+                dimension = dimension,
+                createdAtEpochMillis = createdAt,
+            )
+        )
+
+        insert("A", 2000L)
+        insert("B", 1000L)
+
+        val entries = repo.observeDailyAccount(date).first().ledgerFor(TimeSlot.LATE_MORNING).entries
+        assertEquals(listOf("A", "B"), entries.map { it.activity })
+    }
+
     @Test
     fun `saveEntry auto-creates template and preserves baseline on case-insensitive reuse unless updateTemplateDefaults is true`() = runTest {
         val dims = repo.observeActiveDimensions().first()
@@ -187,4 +290,5 @@ class EnergyAccountingRepositoryTest {
         val focusCount = repo.observeAllDimensions().first().count { it.name.equals("Focus", ignoreCase = true) }
         assertEquals(1, focusCount)
     }
+
 }

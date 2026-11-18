@@ -75,7 +75,7 @@ class InsightsViewModel(
             repo.observeEntries(current.startDate, current.endDate).map { entries ->
                 val dimensionId = current.selectedDimensionId ?: return@map emptyList()
                 entries.filter { entry -> entry.dimension.id == dimensionId }
-                    .sortedWith(compareBy({ it.date }, { it.timeSlot.ordinal }, { it.createdAtEpochMillis }))
+                    .sortedWith(compareBy({ it.date }, { it.timeSlot.ordinal }, { it.positionInSlot }, { it.createdAtEpochMillis }, { it.id }))
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -108,6 +108,22 @@ class InsightsViewModel(
 
                 InsightsPeriod.CUSTOM -> current.copy(period = period)
             }
+        }
+    }
+
+    fun goToPreviousPeriod() = shiftPeriod(-1L)
+
+    fun goToNextPeriod() = shiftPeriod(1L)
+
+    private fun shiftPeriod(direction: Long) {
+        _state.update { current ->
+            val days = when (current.period) {
+                InsightsPeriod.TODAY -> 1L
+                InsightsPeriod.LAST_7_DAYS -> 7L
+                InsightsPeriod.LAST_30_DAYS -> 30L
+                InsightsPeriod.CUSTOM -> return@update current
+            } * direction
+            current.copy(startDate = current.startDate.plusDays(days), endDate = current.endDate.plusDays(days))
         }
     }
 

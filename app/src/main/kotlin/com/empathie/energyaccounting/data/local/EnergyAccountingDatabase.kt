@@ -18,7 +18,7 @@ import com.empathie.energyaccounting.domain.model.TimeSlot
         ActivityTemplateEntity::class,
         ReminderScheduleEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class EnergyAccountingDatabase : RoomDatabase() {
@@ -73,6 +73,25 @@ abstract class EnergyAccountingDatabase : RoomDatabase() {
     )
 
     companion object {
+        /** Preserve the previous creation-time order independently in each day and slot. */
+        val MIGRATION_2_3: Migration = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `entries` ADD COLUMN `positionInSlot` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL(
+                    """
+                    UPDATE `entries` SET `positionInSlot` = (
+                        SELECT COUNT(*) FROM `entries` AS earlier
+                        WHERE earlier.`dateIso` = `entries`.`dateIso`
+                          AND earlier.`timeSlot` = `entries`.`timeSlot`
+                          AND (earlier.`createdAtEpochMillis` < `entries`.`createdAtEpochMillis`
+                               OR (earlier.`createdAtEpochMillis` = `entries`.`createdAtEpochMillis`
+                                   AND earlier.`id` < `entries`.`id`))
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         /**
          * v1 stored a primary dimension plus a secondary cross-ref table; v2 keeps only
          * the primary dimension on each row. Existing entries and templates are copied
