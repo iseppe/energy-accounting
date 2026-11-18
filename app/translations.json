@@ -27,6 +27,62 @@
     "en": "Next day",
     "it": "Giorno successivo"
   },
+  "previous_period": {
+    "en": "Previous period",
+    "it": "Periodo precedente"
+  },
+  "next_period": {
+    "en": "Next period",
+    "it": "Periodo successivo"
+  },
+  "dimension_filter_label": {
+    "en": "Dimension: %1$s",
+    "it": "Dimensione: %1$s"
+  },
+  "dimension_filter_active": {
+    "en": "Dimension filter active",
+    "it": "Filtro dimensione attivo"
+  },
+  "clear_dimension_filter": {
+    "en": "Clear filter",
+    "it": "Rimuovi filtro"
+  },
+  "loading_insights": {
+    "en": "Loading insights",
+    "it": "Caricamento panoramica"
+  },
+  "show_templates": {
+    "en": "Show templates",
+    "it": "Mostra modelli"
+  },
+  "hide_templates": {
+    "en": "Hide templates",
+    "it": "Nascondi modelli"
+  },
+  "search_templates": {
+    "en": "Search templates",
+    "it": "Cerca modelli"
+  },
+  "no_matching_templates": {
+    "en": "No matching templates",
+    "it": "Nessun modello corrispondente"
+  },
+  "template_options": {
+    "en": "Template options",
+    "it": "Opzioni modello"
+  },
+  "move_entry_up": {
+    "en": "Move up",
+    "it": "Sposta su"
+  },
+  "move_entry_down": {
+    "en": "Move down",
+    "it": "Sposta giù"
+  },
+  "move_entry_to_slot": {
+    "en": "Move to %1$s",
+    "it": "Sposta in %1$s"
+  },
   "open_calendar": {
     "en": "Open calendar history",
     "it": "Apri lo storico"

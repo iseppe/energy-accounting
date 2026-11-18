@@ -83,6 +83,12 @@ abstract class EnergyAccountingDao {
     @Query("SELECT * FROM entries WHERE id = :entryId")
     abstract suspend fun getEntry(entryId: Long): EntryEntity?
 
+    @Query("SELECT * FROM entries WHERE dateIso = :dateIso ORDER BY positionInSlot ASC, createdAtEpochMillis ASC, id ASC")
+    abstract suspend fun getEntryEntitiesForDate(dateIso: String): List<EntryEntity>
+
+    @Query("SELECT COALESCE(MAX(positionInSlot) + 1, 0) FROM entries WHERE dateIso = :dateIso AND timeSlot = :timeSlot")
+    abstract suspend fun nextPositionForSlot(dateIso: String, timeSlot: String): Long
+
     @Query("SELECT COUNT(*) FROM entries WHERE dateIso = :dateIso AND timeSlot = :timeSlot")
     abstract suspend fun countEntriesForSlot(dateIso: String, timeSlot: String): Int
 

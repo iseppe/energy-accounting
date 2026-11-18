@@ -47,6 +47,145 @@ class ExportAndBackupTest {
         db2.close()
     }
 
+    private suspend fun addEntry(repo: EnergyAccountingRepository, date: LocalDate, name: String, createdAt: Long): Long {
+        val dimension = repo.observeActiveDimensions().first().first()
+        return repo.saveEntry(
+            Entry(
+                date = date,
+                timeSlot = TimeSlot.LATE_MORNING,
+                activity = name,
+                situationalNote = null,
+                direction = Direction.SPEND,
+                energyValue = 10,
+                dimension = dimension,
+                createdAtEpochMillis = createdAt,
+            )
+        )
+    }
+
+    @Test
+    fun `backup replacement restores manually reordered entries and their creation times`() = runTest {
+        val date = LocalDate.of(2026, 11, 12)
+        val source = EnergyAccountingRepository(db1)
+        val target = EnergyAccountingRepository(db2)
+        addEntry(source, date, "A", 100L)
+        addEntry(source, date, "B", 200L)
+        val c = addEntry(source, date, "C", 300L)
+        assertTrue(source.moveEntry(date, c, TimeSlot.LATE_MORNING, 0))
+
+        BackupSerializer(db2).restoreJson(BackupSerializer(db1).exportJson(), RestoreMode.REPLACE)
+
+        val entries = target.observeDailyAccount(date).first().ledgerFor(TimeSlot.LATE_MORNING).entries
+        assertEquals(listOf("C", "A", "B"), entries.map { it.activity })
+        assertEquals(listOf(300L, 100L, 200L), entries.map { it.createdAtEpochMillis })
+    }
+
+    @Test
+    fun `backup merge preserves local order and appends nonduplicate entries in backup order`() = runTest {
+        val date = LocalDate.of(2026, 11, 12)
+        val source = EnergyAccountingRepository(db1)
+        val target = EnergyAccountingRepository(db2)
+        addEntry(source, date, "B", 100L)
+        addEntry(source, date, "L1", 10L)
+        addEntry(source, date, "A", 200L)
+        addEntry(target, date, "L1", 10L)
+        addEntry(target, date, "L2", 20L)
+
+        BackupSerializer(db2).restoreJson(BackupSerializer(db1).exportJson(), RestoreMode.MERGE)
+
+        val entries = target.observeDailyAccount(date).first().ledgerFor(TimeSlot.LATE_MORNING).entries
+        assertEquals(listOf("L1", "L2", "B", "A"), entries.map { it.activity })
+        assertEquals(listOf(0L, 1L, 2L, 3L), entries.map { it.positionInSlot })
+    }
+
+    @Test
+    fun `merging an older backup keeps the existing slot-sensitive duplicate rule`() = runTest {
+        val date = LocalDate.of(2026, 11, 12)
+        val source = EnergyAccountingRepository(db1)
+        val target = EnergyAccountingRepository(db2)
+        addEntry(source, date, "A", 100L)
+        val local = addEntry(target, date, "A", 100L)
+        assertTrue(target.moveEntry(date, local, TimeSlot.AFTERNOON, 0))
+
+        BackupSerializer(db2).restoreJson(BackupSerializer(db1).exportJson(), RestoreMode.MERGE)
+
+        val account = target.observeDailyAccount(date).first()
+        assertEquals(listOf("A"), account.ledgerFor(TimeSlot.LATE_MORNING).entries.map { it.activity })
+        assertEquals(listOf("A"), account.ledgerFor(TimeSlot.AFTERNOON).entries.map { it.activity })
+    }
+
+    @Test
+    fun `legacy backups retain creation-time order with file order for ties`() = runTest {
+        val version2 = """
+            {"schemaVersion":2,"dimensions":[{"id":1,"name":"Physical","systemKey":"PHYSICAL","colorIndex":0}],
+             "entries":[
+              {"dateIso":"2026-11-12","timeSlot":"LATE_MORNING","activity":"A","direction":"SPEND","energyValue":10,"dimensionId":1,"createdAtEpochMillis":200},
+              {"dateIso":"2026-11-12","timeSlot":"LATE_MORNING","activity":"C","direction":"SPEND","energyValue":10,"dimensionId":1,"createdAtEpochMillis":100},
+              {"dateIso":"2026-11-12","timeSlot":"LATE_MORNING","activity":"B","direction":"SPEND","energyValue":10,"dimensionId":1,"createdAtEpochMillis":100}]}
+        """.trimIndent()
+        val version1 = version2.replace("\"schemaVersion\":2", "\"schemaVersion\":1")
+            .replace("\"dimensionId\"", "\"primaryDimensionId\"")
+        val repo = EnergyAccountingRepository(db2)
+        for (backup in listOf(version1, version2)) {
+            BackupSerializer(db2).restoreJson(backup, RestoreMode.REPLACE)
+            val entries = repo.observeDailyAccount(LocalDate.of(2026, 11, 12)).first()
+                .ledgerFor(TimeSlot.LATE_MORNING).entries
+            assertEquals(listOf("C", "B", "A"), entries.map { it.activity })
+        }
+    }
+
+    @Test
+    fun `version 3 accepts positions and rejects missing or negative positions before replacing data`() = runTest {
+        val valid = """
+            {"schemaVersion":3,"dimensions":[{"id":1,"name":"Physical","systemKey":"PHYSICAL","colorIndex":0}],
+             "entries":[{"dateIso":"2026-11-12","timeSlot":"LATE_MORNING","activity":"Safe",
+             "direction":"SPEND","energyValue":10,"dimensionId":1,"createdAtEpochMillis":100,"positionInSlot":0}]}
+        """.trimIndent()
+        val serializer = BackupSerializer(db2)
+        serializer.restoreJson(valid, RestoreMode.REPLACE)
+        val repo = EnergyAccountingRepository(db2)
+        for (invalid in listOf(valid.replace(",\"positionInSlot\":0", ""), valid.replace("\"positionInSlot\":0", "\"positionInSlot\":-1"))) {
+            assertTrue(runCatching { serializer.restoreJson(invalid, RestoreMode.REPLACE) }.isFailure)
+            assertEquals(listOf("Safe"), repo.observeDailyAccount(LocalDate.of(2026, 11, 12)).first()
+                .ledgerFor(TimeSlot.LATE_MORNING).entries.map { it.activity })
+        }
+    }
+
+    @Test
+    fun `CSV exports entries in their manually selected slot order`() {
+        val dimension = EnergyDimension(1L, "Physical", SystemDimensionKey.PHYSICAL, 0)
+        val date = LocalDate.of(2026, 11, 12)
+        fun entry(name: String, createdAt: Long, position: Long) = Entry(
+            date = date, timeSlot = TimeSlot.LATE_MORNING, activity = name, situationalNote = null,
+            direction = Direction.SPEND, energyValue = 10, dimension = dimension,
+            createdAtEpochMillis = createdAt, positionInSlot = position,
+        )
+        val csv = CsvExporter.exportEntries(listOf(entry("A", 100L, 1L), entry("B", 200L, 2L), entry("C", 300L, 0L)))
+        assertEquals(listOf("C", "A", "B"), csv.trim().lines().drop(1).map { it.split(',')[2] })
+    }
+
+    @Test
+    fun `PDF lists entries in their manually selected slot order`() {
+        val date = LocalDate.of(2026, 11, 12)
+        val dimension = EnergyDimension(1L, "Physical", SystemDimensionKey.PHYSICAL, 0)
+        fun entry(name: String, createdAt: Long, position: Long) = Entry(
+            date = date, timeSlot = TimeSlot.LATE_MORNING, activity = name, situationalNote = null,
+            direction = Direction.SPEND, energyValue = 10, dimension = dimension,
+            createdAtEpochMillis = createdAt, positionInSlot = position,
+        )
+        val entries = listOf(entry("Marker-A", 100L, 1L), entry("Marker-B", 200L, 2L), entry("Marker-C", 300L, 0L))
+        val account = DailyAccount.fromEntries(date, entries)
+        val insights = InsightsCalculator.calculate(date, date, entries, listOf(dimension))
+        val output = ByteArrayOutputStream()
+        PractitionerPdfGenerator().generateReport(output, date, date, listOf(account), insights, PdfLabels.english)
+        val pdf = String(output.toByteArray(), Charsets.ISO_8859_1)
+
+        val c = pdf.indexOf("Marker-C")
+        val a = pdf.indexOf("Marker-A")
+        val b = pdf.indexOf("Marker-B")
+        assertTrue("PDF must list C, A, B", c >= 0 && c < a && a < b)
+    }
+
     @Test
     fun `CsvExporter escapes commas, quotes, and newlines according to RFC 4180`() {
         val sensory = EnergyDimension(1L, "Sensory", SystemDimensionKey.SENSORY, 0)
@@ -275,6 +414,29 @@ class ExportAndBackupTest {
         assertTrue(result.isFailure)
         val account = repo2.observeDailyAccount(date).first()
         assertEquals(1, account.slots.getValue(TimeSlot.EARLY_MORNING).entries.size)
+    }
+
+    @Test
+    fun `replacement rejects missing dimension references without deleting local entries`() = runTest {
+        val date = LocalDate.of(2026, 11, 12)
+        val repo = EnergyAccountingRepository(db2)
+        addEntry(repo, date, "Existing", 100L)
+        val invalidEntry = """
+            {"schemaVersion":3,"dimensions":[],"entries":[{"dateIso":"2026-11-12",
+             "timeSlot":"LATE_MORNING","activity":"Imported","direction":"SPEND",
+             "energyValue":10,"dimensionId":999,"createdAtEpochMillis":200,"positionInSlot":0}]}
+        """.trimIndent()
+        val invalidTemplate = """
+            {"schemaVersion":3,"dimensions":[],"templates":[{"normalizedName":"missing",
+             "displayName":"Missing","defaultDirection":"SPEND","defaultEnergyValue":10,
+             "defaultDimensionId":999}],"entries":[]}
+        """.trimIndent()
+
+        for (invalid in listOf(invalidEntry, invalidTemplate)) {
+            assertTrue(runCatching { BackupSerializer(db2).restoreJson(invalid, RestoreMode.REPLACE) }.isFailure)
+            assertEquals(listOf("Existing"), repo.observeDailyAccount(date).first()
+                .ledgerFor(TimeSlot.LATE_MORNING).entries.map { it.activity })
+        }
     }
 
     @Test
