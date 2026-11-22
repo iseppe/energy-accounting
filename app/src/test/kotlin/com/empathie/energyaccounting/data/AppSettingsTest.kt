@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.empathie.energyaccounting.ui.theme.ThemeMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,5 +38,37 @@ class AppSettingsTest {
 
         assertFalse(settings.vibrationEnabled())
         assertTrue(settings.devModeEnabled())
+    }
+
+    @Test
+    fun `update preferences default to automatic, never checked and no snooze`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.getSharedPreferences("empathie_settings", Context.MODE_PRIVATE).edit().clear().commit()
+        val settings = AppSettings(context)
+
+        assertTrue(settings.updateChecksEnabled())
+        assertEquals(0L, settings.lastUpdateCheckEpochMillis())
+        assertNull(settings.snoozedUpdateVersion())
+        assertEquals(0L, settings.snoozedUpdateUntilEpochMillis())
+    }
+
+    @Test
+    fun `update preferences persist`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.getSharedPreferences("empathie_settings", Context.MODE_PRIVATE).edit().clear().commit()
+        val settings = AppSettings(context)
+
+        settings.setUpdateChecksEnabled(false)
+        settings.setLastUpdateCheckEpochMillis(1234L)
+        settings.snoozeUpdate("0.4.0", 5678L)
+
+        assertFalse(AppSettings(context).updateChecksEnabled())
+        assertEquals(1234L, AppSettings(context).lastUpdateCheckEpochMillis())
+        assertEquals("0.4.0", AppSettings(context).snoozedUpdateVersion())
+        assertEquals(5678L, AppSettings(context).snoozedUpdateUntilEpochMillis())
+
+        settings.clearUpdateSnooze()
+        assertNull(settings.snoozedUpdateVersion())
+        assertEquals(0L, settings.snoozedUpdateUntilEpochMillis())
     }
 }

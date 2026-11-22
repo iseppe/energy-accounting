@@ -53,11 +53,49 @@ class AppSettings(context: Context) {
         preferences.edit().putBoolean(KEY_DEV_MODE, enabled).apply()
     }
 
+    fun updateChecksEnabled(): Boolean =
+        preferences.getBoolean(KEY_UPDATE_CHECKS_ENABLED, true)
+
+    fun setUpdateChecksEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_UPDATE_CHECKS_ENABLED, enabled).apply()
+    }
+
+    fun lastUpdateCheckEpochMillis(): Long =
+        preferences.getLong(KEY_LAST_UPDATE_CHECK_EPOCH, 0L)
+
+    fun setLastUpdateCheckEpochMillis(epochMillis: Long) {
+        preferences.edit().putLong(KEY_LAST_UPDATE_CHECK_EPOCH, epochMillis).apply()
+    }
+
+    fun snoozedUpdateVersion(): String? =
+        preferences.getString(KEY_SNOOZED_UPDATE_VERSION, null)
+
+    fun snoozedUpdateUntilEpochMillis(): Long =
+        preferences.getLong(KEY_SNOOZED_UPDATE_UNTIL, 0L)
+
+    fun snoozeUpdate(version: String, untilEpochMillis: Long) {
+        preferences.edit()
+            .putString(KEY_SNOOZED_UPDATE_VERSION, version)
+            .putLong(KEY_SNOOZED_UPDATE_UNTIL, untilEpochMillis)
+            .apply()
+    }
+
+    fun clearUpdateSnooze() {
+        preferences.edit()
+            .remove(KEY_SNOOZED_UPDATE_VERSION)
+            .remove(KEY_SNOOZED_UPDATE_UNTIL)
+            .apply()
+    }
+
     private companion object {
         const val PREFERENCES_NAME = "empathie_settings"
         const val KEY_THEME_MODE = "theme_mode"
         const val KEY_LANGUAGE = "app_language"
         const val KEY_VIBRATION = "vibration_enabled"
         const val KEY_DEV_MODE = "dev_mode_enabled"
+        const val KEY_UPDATE_CHECKS_ENABLED = "update_checks_enabled"
+        const val KEY_LAST_UPDATE_CHECK_EPOCH = "last_update_check_epoch"
+        const val KEY_SNOOZED_UPDATE_VERSION = "snoozed_update_version"
+        const val KEY_SNOOZED_UPDATE_UNTIL = "snoozed_update_until"
     }
 }
