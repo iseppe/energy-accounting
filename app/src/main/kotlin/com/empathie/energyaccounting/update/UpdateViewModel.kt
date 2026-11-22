@@ -18,6 +18,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -270,7 +271,14 @@ class UpdateViewModel(
 
     /** Opens the system screen that allows installs from this app. */
     fun openInstallSettings() {
-        installer.openInstallPermissionSettings()
+        val info = _state.value.infoOrNull()
+        try {
+            installer.openInstallPermissionSettings()
+        } catch (_: ActivityNotFoundException) {
+            // Some OEM and TV builds do not expose the unknown-sources screen. Report it instead
+            // of letting the launch exception crash the app.
+            _state.value = UpdateUiState.Error(info, error = null, kind = UpdateError.INSTALLER)
+        }
     }
 
     /** Developer Mode preview: fabricated data, and a blank URL so it can never download. */
@@ -321,7 +329,7 @@ class UpdateViewModel(
             val hasSpace = withContext(ioDispatcher) {
                 updatesDir.mkdirs()
                 cleanUpdatesDirectory(removePartFiles = true)
-                updatesDir.usableSpace >= info.apkSizeBytes * 2
+                updatesDir.usableSpace / 2 >= info.apkSizeBytes
             }
             if (!hasSpace) {
                 publishDownloadState(
@@ -419,11 +427,14 @@ class UpdateViewModel(
         }
     }
 
-    /** Only the newest download may publish; an old cancelled job must not replace its state. */
+    /**
+     * Only the newest download may publish; an old cancelled job must not replace its state.
+     *
+     * The token check and the write happen in the same atomic update, so a cancellation that
+     * bumps the token between them cannot be overwritten by a stale progress callback.
+     */
     private fun publishDownloadState(token: Int, newState: UpdateUiState) {
-        if (token == downloadToken) {
-            _state.value = newState
-        }
+        _state.update { current -> if (token == downloadToken) newState else current }
     }
 
     /** Invalidate the current download and stop it; its cleanup still deletes the files. */
@@ -494,6 +505,3 @@ class UpdateViewModel(
         const val FALLBACK_APK_NAME = "update.apk"
     }
 }
-
-/** A filesystem problem while finalizing a download, reported as a storage error. */
-private class StorageException(message: String) : IOException(message)

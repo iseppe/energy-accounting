@@ -10,9 +10,9 @@ import org.junit.Test
 class UpdateErrorMessagesTest {
 
     @Test
-    fun `package mismatch uses the generic message`() {
+    fun `package mismatch uses the package message`() {
         assertEquals(
-            R.string.update_error_generic,
+            R.string.update_error_package,
             errorMessageRes(UpdateUiState.Error(null, VerificationError.PACKAGE, UpdateError.UNKNOWN)),
         )
     }
@@ -34,9 +34,9 @@ class UpdateErrorMessagesTest {
     }
 
     @Test
-    fun `unreadable apk uses the generic message`() {
+    fun `unreadable apk uses the unreadable message`() {
         assertEquals(
-            R.string.update_error_generic,
+            R.string.update_error_unreadable,
             errorMessageRes(UpdateUiState.Error(null, VerificationError.UNREADABLE, UpdateError.UNKNOWN)),
         )
     }

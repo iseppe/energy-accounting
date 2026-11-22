@@ -198,6 +198,8 @@
     <string name="update_error_network">Impossibile raggiungere GitHub. Controlla la connessione e riprova.</string>
     <string name="update_error_checksum">Il file scaricato non corrisponde al checksum pubblicato. È stato eliminato.</string>
     <string name="update_error_signature">L’aggiornamento non è firmato con la stessa chiave dell’app. Installazione bloccata.</string>
+    <string name="update_error_package">Il file scaricato appartiene a un pacchetto diverso. Installazione bloccata.</string>
+    <string name="update_error_unreadable">Impossibile leggere il file scaricato come app. È stato eliminato.</string>
     <string name="update_error_storage">Spazio insufficiente per scaricare l’aggiornamento.</string>
     <string name="update_error_installer">Nessun programma di installazione disponibile sul dispositivo.</string>
     <string name="update_error_generic">Qualcosa è andato storto. Riprova.</string>

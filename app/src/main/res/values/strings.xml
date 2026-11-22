@@ -198,6 +198,8 @@
     <string name="update_error_network">Couldn’t reach GitHub. Check your connection and try again.</string>
     <string name="update_error_checksum">The downloaded file didn’t match the published checksum. It was deleted.</string>
     <string name="update_error_signature">The update is not signed by the same key as this app. Installation was blocked.</string>
+    <string name="update_error_package">The downloaded file is for a different app package. Installation was blocked.</string>
+    <string name="update_error_unreadable">The downloaded file could not be read as an app. It was deleted.</string>
     <string name="update_error_storage">Not enough free space to download the update.</string>
     <string name="update_error_installer">No installer is available on this device.</string>
     <string name="update_error_generic">Something went wrong. Try again.</string>

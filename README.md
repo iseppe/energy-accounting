@@ -42,7 +42,15 @@ a substitute for professional care.
 - **Insights** — summary grid, Gain/Spend/Net trend chart, and breakdowns by
   dimension and time slot for today, the last 7 or 30 days, or a custom range.
 - **Calendar history** — browse past days at a glance.
-- **Export** — practitioner PDF report, CSV, and JSON backup/restore.
+- **Export** — share a practitioner PDF report, export a CSV ledger, and back
+  up or restore JSON.
+- **Light and dark themes** — follow the system or choose light or dark.
+- **Configurable haptics** — tap feedback can be turned off in settings.
+- **In-app updates** — checks GitHub Releases on launch and when you return to
+  the app, at most once a day. A floating prompt offers **Later** or **Update**;
+  the APK downloads inside the app, is verified before install, and then opens
+  Android's system installer. The Updates card in Manage & Export has the
+  automatic-check switch and **Check now**.
 - **Two languages** — English and Italian.
 
 ## Install
@@ -53,19 +61,37 @@ a substitute for professional care.
    you open the APK).
 3. Open the APK and install. Requires **Android 8.0 or newer**.
 
-In-app updates are available from v0.4.0: after installing v0.4.0 once, the app
-can update itself from GitHub Releases and you need no file manager.
+v0.4.0 is the first release that can update itself. If you are on v0.3.0 or
+older, install v0.4.0 once by hand; after that, new versions arrive in the app.
+The first in-app update may ask you to allow installs from Empathie Energy
+Accounting.
 
 If you are migrating from the debug build to the release build: export a JSON
 backup from the debug build, uninstall the debug build, install the release
 build, and restore the JSON backup.
 
+### In-app updates
+
+The app reads releases from
+[GitHub Releases](https://github.com/iseppe/energy-accounting/releases). When a
+newer version is available, a prompt shows its version and notes; **Later**
+hides that version for 24 hours, and **Update** downloads and verifies it before
+handing it to Android's installer. The download is checked against the published
+SHA-256, the expected package name, and the certificate of the installed app, so
+a failed check stops the update instead of opening the installer.
+
+Automatic checks run at most once a day, and you can turn them off in
+**Manage & Export → Updates**; **Check now** there still works with automatic
+checks off.
+
 ## Privacy
 
 - No account, no ads, no analytics, no trackers.
 - All entries stay in a local Room database on your device.
-- The only network access is the optional GitHub update check (you can ignore
-  update prompts; nothing is uploaded).
+- The in-app update check is on by default. Turn it off in
+  **Manage & Export → Updates**; **Check now** remains available there.
+- The only network access is the update check and the APK download. Nothing is
+  uploaded.
 
 ## Build from source
 
@@ -83,4 +109,5 @@ generated XML.
 
 Copyright (C) 2026 iseppe. Licensed under GPL-3.0-only. Full text in [LICENSE](LICENSE).
 
-Credits: the launcher icon uses Lucide brain/zap glyphs (ISC license).
+Credits: the launcher icon uses Lucide brain/zap glyphs
+([ISC license](docs/licenses/lucide.txt)).

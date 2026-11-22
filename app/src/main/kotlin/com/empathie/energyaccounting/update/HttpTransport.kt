@@ -52,12 +52,21 @@ class UrlConnectionTransport : HttpTransport {
             var lastReportedBytes = 0L
             var lastReportedAt = 0L
             connection.inputStream.use { input ->
-                FileOutputStream(destination).use { output ->
+                val output = try {
+                    FileOutputStream(destination)
+                } catch (e: IOException) {
+                    throw StorageException("Could not create ${destination.name}", e)
+                }
+                try {
                     val chunk = ByteArray(CHUNK_SIZE)
                     while (true) {
                         val read = input.read(chunk)
                         if (read < 0) break
-                        output.write(chunk, 0, read)
+                        try {
+                            output.write(chunk, 0, read)
+                        } catch (e: IOException) {
+                            throw StorageException("Could not write ${destination.name}", e)
+                        }
                         downloaded += read
                         val now = System.currentTimeMillis()
                         if (downloaded - lastReportedBytes >= PROGRESS_INTERVAL_BYTES ||
@@ -67,6 +76,12 @@ class UrlConnectionTransport : HttpTransport {
                             lastReportedAt = now
                             onProgress(downloaded)
                         }
+                    }
+                } finally {
+                    try {
+                        output.close()
+                    } catch (e: IOException) {
+                        throw StorageException("Could not finish writing ${destination.name}", e)
                     }
                 }
             }

@@ -23,4 +23,4 @@ jobs:
         run: |
           sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Test and build
-        run: ./gradlew testDebugUnitTest assembleDebug --console=plain
+        run: ./gradlew testDebugUnitTest assembleDebug assembleRelease --console=plain

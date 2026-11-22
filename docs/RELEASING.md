@@ -95,10 +95,10 @@ Verify the result before shipping anything:
   app/build/outputs/apk/release/app-release.apk | sed -n '1p'
 ```
 
-`apksigner` must report a verified v2 (or newer) signature scheme and the
-expected RSA 4096 release certificate. A v2-only scheme is correct here: at
-`minSdk = 26` a v1 (JAR) signature is unnecessary, and v3 exists only for key
-rotation. `aapt` must report the expected
+`apksigner` must verify the APK and report the expected RSA 4096 release
+certificate. Add `--verbose` when you want to inspect the signature schemes; a
+v2-only scheme is correct here: at `minSdk = 26` a v1 (JAR) signature is
+unnecessary, and v3 exists only for key rotation. `aapt` must report the expected
 `versionCode='…' versionName='…'`. Unset the password variables when finished.
 
 ## Versioning
