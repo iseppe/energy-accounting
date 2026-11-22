@@ -8,7 +8,7 @@
 
 **Tech Stack:** Kotlin 2.1, Jetpack Compose (Material 3), Room 2.7 (`MIGRATION_1_2`), Kotlin Coroutines & Flow, Kotlinx Serialization JSON (supporting both v1 and v2 backup payloads), custom PDF 1.4 table/vector writer, JUnit 4 + Robolectric.
 
-**Spec:** `/home/iseppe/.opencode/plan/2026-11-13-energy-accounting-v2-refinements-design.md` (to be committed into `docs/superpowers/specs/2026-11-13-energy-accounting-v2-refinements-design.md` in Task 1).
+**Spec:** `docs/superpowers/specs/2026-11-13-energy-accounting-v2-refinements-design.md`.
 
 ## Global Constraints
 

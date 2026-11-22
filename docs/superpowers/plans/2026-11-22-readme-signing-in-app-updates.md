@@ -275,7 +275,7 @@ Expected: the Daily Account tab shows entries for **13/11/2026** across the four
 Open the **Daily Account** tab, stay on Today (13/11/2026), scroll to the top, and capture:
 
 ```text
-mobile_save_screenshot(device, saveTo: "/var/home/iseppe/git/empathie-energy-accounting/docs/screenshots/01-daily-account.png", maxSize: 2400)
+mobile_save_screenshot(device, saveTo: "docs/screenshots/01-daily-account.png", maxSize: 2400)
 ```
 
 - [ ] **Step 6: Capture the Add Entry screenshot**
