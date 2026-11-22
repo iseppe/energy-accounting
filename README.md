@@ -1,14 +1,16 @@
 <p align="center">
-  <img src="docs/images/icon.png" width="88" alt="Empathie Energy Accounting icon">
+  <img src="docs/images/icon.png" width="88" alt="Energy Accounting icon">
 </p>
 
-# Empathie Energy Accounting
+<h1 align="center">Energy Accounting</h1>
 
-A private, offline-first Android ledger for the Energy Accounting method.
+<p align="center">A private, offline-first Android ledger for the Energy Accounting method.</p>
 
-[![Download APK](https://img.shields.io/badge/Download-APK-2ea44f?logo=android&logoColor=white)](https://github.com/iseppe/energy-accounting/releases/latest)
-[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
-[![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)](#install)
+<p align="center">
+  <a href="https://github.com/iseppe/energy-accounting/releases/latest"><img src="https://img.shields.io/badge/Download-APK-2ea44f?logo=android&logoColor=white" alt="Download APK"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-blue.svg" alt="License: GPL-3.0"></a>
+  <a href="#install"><img src="https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white" alt="Android 8.0+"></a>
+</p>
 
 <p align="center">
   <img src="docs/screenshots/01-daily-account.png" width="240" alt="Daily Account">
@@ -18,7 +20,7 @@ A private, offline-first Android ledger for the Energy Accounting method.
 
 ## What it is
 
-Empathie Energy Accounting is a personal stress-management and energy-monitoring
+Energy Accounting is a personal stress-management and energy-monitoring
 app based on the Energy Accounting method by **Maja Toudal and Tony Attwood**.
 It helps you track how daily activities drain or recharge energy across distinct
 areas of functioning, using a zero-based daily ledger: every day starts at zero
@@ -63,8 +65,7 @@ a substitute for professional care.
 
 v0.4.0 is the first release that can update itself. If you are on v0.3.0 or
 older, install v0.4.0 once by hand; after that, new versions arrive in the app.
-The first in-app update may ask you to allow installs from Empathie Energy
-Accounting.
+The first in-app update may ask you to allow installs from Energy Accounting.
 
 If you are migrating from the debug build to the release build: export a JSON
 backup from the debug build, uninstall the debug build, install the release
