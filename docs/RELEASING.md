@@ -159,30 +159,16 @@ the owner's explicit go-ahead.
 
 If `docs/release-notes/<tag>.md` exists (for example
 `docs/release-notes/v0.3.0.md`), the release workflow uses its contents as the
-GitHub Release body instead of generated notes. This is how the first signed
-release carries the debug-to-release migration warning below. Prefer curated
-notes for every release.
+GitHub Release body instead of generated notes. Prefer curated notes for every
+release.
 
-## Debug-to-release migration (one-time, user-facing)
-
-Existing installs are debug-signed. The release-signed APK **cannot** install
-over them. Users moving from a debug build must:
-
-1. Export a JSON backup from the app.
-2. Uninstall the debug build.
-3. Install the release APK.
-4. Restore the backup.
-
-This warning must appear in the README and in the release notes of the first
-signed release.
-
-## Live updater test (deferred)
+## Live updater test
 
 Once the repository is public and a newer signed release exists, the in-app
 updater can be exercised end to end (update check → download → checksum and
 signature verification → install). Use a real signed release; do not create and
-delete a version that has already shipped. Running this live test is deferred
-until the owner explicitly asks for it.
+delete a version that has already shipped. Run this once after the repository
+becomes public.
 
 ## Backup gate
 

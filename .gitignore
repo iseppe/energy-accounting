@@ -15,3 +15,11 @@ captures/
 *.jks
 *.keystore
 keystore.properties
+.env
+.env.*
+*.password
+*.p12
+*.pfx
+*.pem
+*.key
+secrets.properties
