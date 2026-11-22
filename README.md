@@ -63,10 +63,10 @@ a substitute for professional care.
    you open the APK).
 3. Open the APK and install. Requires **Android 8.0 or newer**.
 
-v0.4.0 introduced in-app updates. Install v0.4.1 once by hand; after that, the
-app checks for new releases on launch and installs them after verifying the
-SHA-256, package name, and signer. The first in-app update may ask you to allow
-installs from Energy Accounting.
+v0.4.0 introduced in-app updates. Install the latest APK once by hand; after
+that, the app checks for new releases on launch and installs them after
+verifying the SHA-256, package name, and signer. The first in-app update may ask
+you to allow installs from Energy Accounting.
 
 ### In-app updates
 
