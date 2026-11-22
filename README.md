@@ -63,9 +63,11 @@ a substitute for professional care.
    you open the APK).
 3. Open the APK and install. Requires **Android 8.0 or newer**.
 
-v0.4.0 is the first release that can update itself. If you are on v0.3.0 or
-older, install v0.4.0 once by hand; after that, new versions arrive in the app.
-The first in-app update may ask you to allow installs from Energy Accounting.
+v0.4.0 introduced in-app updates. Install v0.4.1 once by hand; while this
+repository is private, the in-app updater cannot see new releases. Once the
+releases are public, the app can check for updates on launch and install them
+after verifying the SHA-256, package name, and signer. The first in-app update
+may ask you to allow installs from Energy Accounting.
 
 If you are migrating from the debug build to the release build: export a JSON
 backup from the debug build, uninstall the debug build, install the release

@@ -12,7 +12,8 @@ No secret values belong in this file or anywhere in the repository.
 The keystore path, key alias `empathie`, and certificate DN
 `CN=Empathie Energy Accounting, O=Empathie, C=IT` keep the historical
 “Empathie” naming: they are the permanent signing identity. They are not
-user-visible, and they must not be renamed or regenerated.
+user-visible, and they must not be renamed or regenerated, because changing the
+signing identity would break in-place updates.
 
 **The key is permanent.** Android app updates must be signed with the same key
 for the lifetime of the app. If the keystore or its password is lost, installed
@@ -122,6 +123,12 @@ unnecessary, and v3 exists only for key rotation. `aapt` must report the expecte
 1. Start from a clean working tree on the intended commit; `git status` must be
    empty and the full test suite must pass
    (`./gradlew testDebugUnitTest`).
+
+   Run the launcher-icon render test on an emulator (API 35 and, if available,
+   API 26) and install the release APK on a clean AVD to confirm the icon
+   renders; the release workflow's `application-icon-*` check is only a
+   packaging guard.
+
 2. Write the release notes to `docs/release-notes/<tag>.md` (see below) and
    commit them.
 3. Tag the commit and push the tag to `upstream`:
