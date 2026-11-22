@@ -91,7 +91,9 @@ class ActivityTemplatesScreenTest {
             isReleaseBuild = false,
         )
         compose.setContent { if (showScreen) EmpathieTheme(ThemeMode.LIGHT) { ManageExportScreen(vm, updateVm) } }
-        compose.waitUntil(5_000) { vm.templates.value.size == 3 }
+        // The seeded template query can be slow on a loaded CI worker; keep this setup wait
+        // generous so it does not flake before the assertions run.
+        compose.waitUntil(10_000) { vm.templates.value.size == 3 }
     }
 
     @After

@@ -526,6 +526,88 @@ class UpdateViewModelTest {
     }
 
     @Test
+    fun `a storage failure during the download is not reported as a network error`() = runTest {
+        val source = FakeReleaseSource(release = updateInfo()).apply {
+            downloadError = StorageException("No space left on device")
+        }
+        val installer = FakeInstaller()
+        val viewModel = newViewModel(source, installer = installer)
+
+        viewModel.checkNow()
+        advanceUntilIdle()
+        viewModel.onUpdate()
+        advanceUntilIdle()
+
+        val state = viewModel.state.value
+        assertTrue(state is UpdateUiState.Error)
+        assertEquals(UpdateError.STORAGE, (state as UpdateUiState.Error).kind)
+        assertFalse(File(cacheDir, "updates/app.apk.part").exists())
+        assertNull(installer.installed)
+    }
+
+    @Test
+    fun `a missing settings activity shows an installer error instead of crashing`() = runTest {
+        val source = FakeReleaseSource(release = updateInfo())
+        val installer = FakeInstaller(canInstallValue = false).apply {
+            openSettingsError = ActivityNotFoundException("No unknown-sources screen")
+        }
+        val viewModel = newViewModel(source, installer = installer)
+
+        viewModel.checkNow()
+        advanceUntilIdle()
+        viewModel.onUpdate()
+        advanceUntilIdle()
+        assertTrue(viewModel.state.value is UpdateUiState.PermissionRequired)
+
+        viewModel.openInstallSettings()
+
+        val state = viewModel.state.value
+        assertTrue(state is UpdateUiState.Error)
+        assertEquals(UpdateError.INSTALLER, (state as UpdateUiState.Error).kind)
+        assertEquals(0, source.downloadCalls)
+    }
+
+    @Test
+    fun `progress after cancel does not resurrect the download`() = runTest {
+        val source = FakeReleaseSource(release = updateInfo(), hangDownload = true)
+        val viewModel = newViewModel(source)
+
+        viewModel.checkNow()
+        advanceUntilIdle()
+        viewModel.onUpdate()
+        assertTrue(viewModel.state.value is UpdateUiState.Downloading)
+
+        viewModel.cancelDownload()
+        advanceUntilIdle()
+        assertTrue(viewModel.state.value is UpdateUiState.Idle)
+
+        source.reportProgress()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.state.value is UpdateUiState.Idle)
+    }
+
+    @Test
+    fun `progress after Later does not resurrect the download`() = runTest {
+        val source = FakeReleaseSource(release = updateInfo(), hangDownload = true)
+        val viewModel = newViewModel(source)
+
+        viewModel.checkNow()
+        advanceUntilIdle()
+        viewModel.onUpdate()
+        assertTrue(viewModel.state.value is UpdateUiState.Downloading)
+
+        viewModel.onLater()
+        advanceUntilIdle()
+        assertTrue(viewModel.state.value is UpdateUiState.Idle)
+
+        source.reportProgress()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.state.value is UpdateUiState.Idle)
+    }
+
+    @Test
     fun `a download failure shows a network error and deletes the part`() = runTest {
         val source = FakeReleaseSource(release = updateInfo()).apply {
             downloadError = IOException("connection reset")
@@ -623,6 +705,7 @@ class UpdateViewModelTest {
         var latestCalls = 0
         var downloadCalls = 0
         var downloadError: Exception? = null
+        private var lastProgress: ((downloaded: Long, total: Long) -> Unit)? = null
 
         override suspend fun latestRelease(): UpdateInfo? {
             latestCalls++
@@ -637,11 +720,16 @@ class UpdateViewModelTest {
             onProgress: (downloaded: Long, total: Long) -> Unit,
         ) {
             downloadCalls++
+            lastProgress = onProgress
             destination.writeBytes(byteArrayOf(1, 2, 3))
             downloadError?.let { throw it }
             onProgress(1L, info.apkSizeBytes)
             if (hangDownload) awaitCancellation()
             onProgress(3L, info.apkSizeBytes)
+        }
+
+        fun reportProgress() {
+            lastProgress?.invoke(2L, 3L)
         }
     }
 
@@ -670,11 +758,13 @@ class UpdateViewModelTest {
         var installed: File? = null
         var openedSettings = 0
         var installError: Exception? = null
+        var openSettingsError: Exception? = null
 
         override fun canInstall(): Boolean = canInstallValue
 
         override fun openInstallPermissionSettings() {
             openedSettings++
+            openSettingsError?.let { throw it }
         }
 
         override fun install(apk: File) {

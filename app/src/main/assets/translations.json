@@ -791,6 +791,14 @@
     "en": "The update is not signed by the same key as this app. Installation was blocked.",
     "it": "L’aggiornamento non è firmato con la stessa chiave dell’app. Installazione bloccata."
   },
+  "update_error_package": {
+    "en": "The downloaded file is for a different app package. Installation was blocked.",
+    "it": "Il file scaricato appartiene a un pacchetto diverso. Installazione bloccata."
+  },
+  "update_error_unreadable": {
+    "en": "The downloaded file could not be read as an app. It was deleted.",
+    "it": "Impossibile leggere il file scaricato come app. È stato eliminato."
+  },
   "update_error_storage": {
     "en": "Not enough free space to download the update.",
     "it": "Spazio insufficiente per scaricare l’aggiornamento."

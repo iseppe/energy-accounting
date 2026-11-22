@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -208,6 +209,8 @@ private fun DownloadingContent(
     onCancel: () -> Unit,
 ) {
     DialogHeader(Icons.Filled.SystemUpdate, R.string.update_downloading)
+    // Follow the app locale, not the system default, so an in-app language change is reflected.
+    val locale = LocalConfiguration.current.locales[0]
     if (state.total > 0L) {
         LinearProgressIndicator(
             progress = { (state.downloaded.toFloat() / state.total.toFloat()).coerceIn(0f, 1f) },
@@ -216,8 +219,8 @@ private fun DownloadingContent(
         Text(
             text = stringResource(
                 R.string.update_download_progress,
-                formatBytes(state.downloaded),
-                formatBytes(state.total),
+                formatBytes(state.downloaded, locale),
+                formatBytes(state.total, locale),
             ),
             style = MaterialTheme.typography.bodySmall,
         )
@@ -309,9 +312,9 @@ private fun ErrorContent(
 
 internal fun errorMessageRes(state: UpdateUiState.Error): Int = when (val error = state.error) {
     VerificationError.CHECKSUM -> R.string.update_error_checksum
-    VerificationError.PACKAGE -> R.string.update_error_generic
+    VerificationError.PACKAGE -> R.string.update_error_package
     VerificationError.SIGNATURE -> R.string.update_error_signature
-    VerificationError.UNREADABLE -> R.string.update_error_generic
+    VerificationError.UNREADABLE -> R.string.update_error_unreadable
     null -> when (state.kind) {
         UpdateError.NETWORK -> R.string.update_error_network
         UpdateError.STORAGE -> R.string.update_error_storage
@@ -321,8 +324,7 @@ internal fun errorMessageRes(state: UpdateUiState.Error): Int = when (val error 
 }
 
 /** Human-readable size for the download line, e.g. "1.2 MB". */
-private fun formatBytes(bytes: Long): String {
-    val locale = Locale.getDefault()
+private fun formatBytes(bytes: Long, locale: Locale): String {
     return when {
         bytes >= 1024L * 1024L -> String.format(locale, "%.1f MB", bytes / (1024.0 * 1024.0))
         bytes >= 1024L -> String.format(locale, "%.1f KB", bytes / 1024.0)

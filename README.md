@@ -42,7 +42,10 @@ a substitute for professional care.
 - **Insights** — summary grid, Gain/Spend/Net trend chart, and breakdowns by
   dimension and time slot for today, the last 7 or 30 days, or a custom range.
 - **Calendar history** — browse past days at a glance.
-- **Export** — practitioner PDF report, CSV, and JSON backup/restore.
+- **Export** — share a practitioner PDF report, export a CSV ledger, and back
+  up or restore JSON.
+- **Light and dark themes** — follow the system or choose light or dark.
+- **Configurable haptics** — tap feedback can be turned off in settings.
 - **In-app updates** — checks GitHub Releases on launch and when you return to
   the app, at most once a day. A floating prompt offers **Later** or **Update**;
   the APK downloads inside the app, is verified before install, and then opens
@@ -106,4 +109,5 @@ generated XML.
 
 Copyright (C) 2026 iseppe. Licensed under GPL-3.0-only. Full text in [LICENSE](LICENSE).
 
-Credits: the launcher icon uses Lucide brain/zap glyphs (ISC license).
+Credits: the launcher icon uses Lucide brain/zap glyphs
+([ISC license](docs/licenses/lucide.txt)).

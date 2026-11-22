@@ -16,6 +16,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,6 +39,7 @@ fun UpdatesSection(viewModel: UpdateViewModel) {
     val checksEnabled by viewModel.checksEnabled.collectAsStateWithLifecycle()
     val checkStatus by viewModel.checkStatus.collectAsStateWithLifecycle()
     val haptics = LocalAppHaptics.current
+    val automaticChecksLabel = stringResource(R.string.update_check_automatic)
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -53,7 +56,7 @@ fun UpdatesSection(viewModel: UpdateViewModel) {
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = stringResource(R.string.update_check_automatic),
+                    text = automaticChecksLabel,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
@@ -62,6 +65,9 @@ fun UpdatesSection(viewModel: UpdateViewModel) {
                     onCheckedChange = { enabled ->
                         haptics.tick()
                         viewModel.setChecksEnabled(enabled)
+                    },
+                    modifier = Modifier.semantics {
+                        contentDescription = automaticChecksLabel
                     },
                 )
             }
