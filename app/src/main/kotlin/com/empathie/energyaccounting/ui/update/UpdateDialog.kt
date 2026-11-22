@@ -8,21 +8,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -33,8 +32,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.empathie.energyaccounting.R
 import com.empathie.energyaccounting.ui.common.LocalAppHaptics
@@ -51,6 +48,7 @@ import java.util.Locale
  * [UpdateViewModel.onLater], which snoozes this version for a day. Installing and verifying states
  * keep their progress visible, and only the ViewModel decides when the dialog goes away.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UpdateDialog(viewModel: UpdateViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -59,81 +57,81 @@ fun UpdateDialog(viewModel: UpdateViewModel) {
 
     if (state is UpdateUiState.Idle || state is UpdateUiState.Checking) return
 
-    Dialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val maxSheetHeight = (LocalConfiguration.current.screenHeightDp * 0.85f).dp
+
+    ModalBottomSheet(
         onDismissRequest = viewModel::onLater,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        sheetState = sheetState,
     ) {
-        Card(
+        Column(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .widthIn(max = 420.dp),
-            shape = RoundedCornerShape(24.dp),
+                .fillMaxWidth()
+                .heightIn(max = maxSheetHeight)
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                when (val current = state) {
-                    UpdateUiState.Idle, UpdateUiState.Checking -> Unit
+            when (val current = state) {
+                UpdateUiState.Idle, UpdateUiState.Checking -> Unit
 
-                    is UpdateUiState.Available -> AvailableContent(
-                        state = current,
-                        onLater = {
-                            haptics.tick()
-                            viewModel.onLater()
-                        },
-                        onUpdate = {
-                            haptics.tick()
-                            viewModel.onUpdate()
-                        },
-                    )
+                is UpdateUiState.Available -> AvailableContent(
+                    state = current,
+                    onLater = {
+                        haptics.tick()
+                        viewModel.onLater()
+                    },
+                    onUpdate = {
+                        haptics.tick()
+                        viewModel.onUpdate()
+                    },
+                )
 
-                    is UpdateUiState.Downloading -> DownloadingContent(
-                        state = current,
-                        onCancel = {
-                            haptics.tick()
-                            viewModel.cancelDownload()
-                        },
-                    )
+                is UpdateUiState.Downloading -> DownloadingContent(
+                    state = current,
+                    onCancel = {
+                        haptics.tick()
+                        viewModel.cancelDownload()
+                    },
+                )
 
-                    is UpdateUiState.Verifying -> VerifyingContent(
-                        onCancel = {
-                            haptics.tick()
-                            viewModel.cancelDownload()
-                        },
-                    )
+                is UpdateUiState.Verifying -> VerifyingContent(
+                    onCancel = {
+                        haptics.tick()
+                        viewModel.cancelDownload()
+                    },
+                )
 
-                    is UpdateUiState.PermissionRequired -> PermissionContent(
-                        onLater = {
-                            haptics.tick()
-                            viewModel.onLater()
-                        },
-                        onOpenSettings = {
-                            haptics.tick()
-                            viewModel.openInstallSettings()
-                        },
-                    )
+                is UpdateUiState.PermissionRequired -> PermissionContent(
+                    onLater = {
+                        haptics.tick()
+                        viewModel.onLater()
+                    },
+                    onOpenSettings = {
+                        haptics.tick()
+                        viewModel.openInstallSettings()
+                    },
+                )
 
-                    is UpdateUiState.Installing -> InstallingContent()
+                is UpdateUiState.Installing -> InstallingContent()
 
-                    is UpdateUiState.Error -> ErrorContent(
-                        state = current,
-                        onLater = {
-                            haptics.tick()
-                            viewModel.onLater()
-                        },
-                        onRetry = {
-                            haptics.tick()
-                            viewModel.retry()
-                        },
-                        onViewRelease = { url ->
-                            haptics.tick()
-                            runCatching {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                            }
-                        },
-                    )
-                }
+                is UpdateUiState.Error -> ErrorContent(
+                    state = current,
+                    onLater = {
+                        haptics.tick()
+                        viewModel.onLater()
+                    },
+                    onRetry = {
+                        haptics.tick()
+                        viewModel.retry()
+                    },
+                    onViewRelease = { url ->
+                        haptics.tick()
+                        runCatching {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        }
+                    },
+                )
             }
         }
     }
@@ -167,14 +165,12 @@ private fun ReleaseNotes(notes: String) {
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
-        Column(
+        ReleaseNotesMarkdown(
+            notes = notes,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 180.dp)
-                .verticalScroll(rememberScrollState()),
-        ) {
-            Text(text = notes, style = MaterialTheme.typography.bodySmall)
-        }
+                .heightIn(max = 360.dp),
+        )
     }
 }
 
@@ -190,6 +186,7 @@ private fun AvailableContent(
         style = MaterialTheme.typography.bodyMedium,
     )
     ReleaseNotes(state.info.releaseNotes)
+    HorizontalDivider()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
@@ -227,6 +224,7 @@ private fun DownloadingContent(
     } else {
         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
     }
+    HorizontalDivider()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
@@ -241,6 +239,7 @@ private fun DownloadingContent(
 private fun VerifyingContent(onCancel: () -> Unit) {
     DialogHeader(Icons.Filled.SystemUpdate, R.string.update_verifying)
     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+    HorizontalDivider()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
@@ -258,6 +257,7 @@ private fun PermissionContent(onLater: () -> Unit, onOpenSettings: () -> Unit) {
         text = stringResource(R.string.update_permission_body),
         style = MaterialTheme.typography.bodyMedium,
     )
+    HorizontalDivider()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
@@ -297,6 +297,7 @@ private fun ErrorContent(
             Text(stringResource(R.string.update_view_release))
         }
     }
+    HorizontalDivider()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
