@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -59,6 +60,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -72,8 +74,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.empathie.energyaccounting.BuildConfig
 import com.empathie.energyaccounting.R
@@ -144,6 +149,11 @@ fun ManageExportScreen(viewModel: ManageExportViewModel, updateViewModel: Update
     var selectedDevSlot by remember { mutableStateOf(TimeSlot.EARLY_MORNING) }
     var templatesExpanded by rememberSaveable { mutableStateOf(false) }
     var templateQuery by rememberSaveable { mutableStateOf("") }
+    var notificationPermissionRefresh by remember { mutableIntStateOf(0) }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        notificationPermissionRefresh += 1
+    }
 
     fun postTestNotification() {
         val posted = CheckInReminderReceiver.postTestNotification(
@@ -262,6 +272,7 @@ fun ManageExportScreen(viewModel: ManageExportViewModel, updateViewModel: Update
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
+        notificationPermissionRefresh += 1
         val pending = pendingEnableReminder
         pendingEnableReminder = null
         if (pending == null) return@rememberLauncherForActivityResult
@@ -275,7 +286,15 @@ fun ManageExportScreen(viewModel: ManageExportViewModel, updateViewModel: Update
     val testNotificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
+        notificationPermissionRefresh += 1
         if (granted) postTestNotification() else viewModel.reportReminderPermissionDenied()
+    }
+
+    val requestNotificationPermissionFromCard = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        notificationPermissionRefresh += 1
+        if (!granted) viewModel.reportReminderPermissionDenied()
     }
 
     LaunchedEffect(message) {
@@ -457,6 +476,38 @@ fun ManageExportScreen(viewModel: ManageExportViewModel, updateViewModel: Update
 
         item {
             SectionCard(title = stringResource(R.string.check_in_reminders)) {
+                val anyReminderEnabled = reminders.any { it.isEnabled }
+                val notificationsEnabled = remember(notificationPermissionRefresh) {
+                    NotificationManagerCompat.from(context).areNotificationsEnabled()
+                }
+                if (anyReminderEnabled && !notificationsEnabled) {
+                    val permissionMissing = Build.VERSION.SDK_INT >=
+                        Build.VERSION_CODES.TIRAMISU &&
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.POST_NOTIFICATIONS,
+                        ) != PackageManager.PERMISSION_GRANTED
+                    NotificationPermissionCard(
+                        showAllow = permissionMissing,
+                        onAllow = {
+                            haptics.tick()
+                            requestNotificationPermissionFromCard.launch(
+                                Manifest.permission.POST_NOTIFICATIONS
+                            )
+                        },
+                        onOpenSettings = {
+                            haptics.tick()
+                            runCatching {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                    }
+                                )
+                            }
+                        },
+                    )
+                }
+
                 reminders.forEach { reminder ->
                     ReminderRow(
                         reminder = reminder,
@@ -896,6 +947,50 @@ private fun TemplateRow(
                     text = { Text(stringResource(R.string.delete)) },
                     onClick = { menuExpanded = false; haptics.tick(); onDelete() },
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationPermissionCard(
+    showAllow: Boolean,
+    onAllow: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.notification_permission_card_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(R.string.notification_permission_card_body),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onOpenSettings) {
+                    Text(stringResource(R.string.notification_permission_open_settings))
+                }
+                if (showAllow) {
+                    Button(onClick = onAllow) {
+                        Text(stringResource(R.string.notification_permission_allow))
+                    }
+                }
             }
         }
     }

@@ -467,6 +467,22 @@
     "en": "Notifications let the app remind you to log entries. Without them, reminders stay silent.",
     "it": "Le notifiche permettono all'app di ricordarti di registrare le voci. Senza di esse i promemoria restano silenziosi."
   },
+  "notification_permission_card_title": {
+    "en": "Notifications are off",
+    "it": "Notifiche disattivate"
+  },
+  "notification_permission_card_body": {
+    "en": "Reminders stay silent until you allow notifications for Energy Accounting.",
+    "it": "I promemoria restano silenziosi finché non consenti le notifiche per Energy Accounting."
+  },
+  "notification_permission_allow": {
+    "en": "Allow notifications",
+    "it": "Consenti notifiche"
+  },
+  "notification_permission_open_settings": {
+    "en": "Open notification settings",
+    "it": "Apri impostazioni notifiche"
+  },
   "send_test_notification": {
     "en": "Send test notification",
     "it": "Invia notifica di prova"

@@ -53,6 +53,19 @@ class AppSettingsTest {
     }
 
     @Test
+    fun `notification permission prompt flag defaults to false and persists`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.getSharedPreferences("empathie_settings", Context.MODE_PRIVATE).edit().clear().commit()
+        val settings = AppSettings(context)
+
+        assertFalse(settings.notificationPermissionPrompted())
+
+        settings.setNotificationPermissionPrompted(true)
+
+        assertTrue(AppSettings(context).notificationPermissionPrompted())
+    }
+
+    @Test
     fun `update preferences persist`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         context.getSharedPreferences("empathie_settings", Context.MODE_PRIVATE).edit().clear().commit()

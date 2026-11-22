@@ -46,6 +46,13 @@ class AppSettings(context: Context) {
         preferences.edit().putBoolean(KEY_VIBRATION, enabled).apply()
     }
 
+    fun notificationPermissionPrompted(): Boolean =
+        preferences.getBoolean(KEY_NOTIFICATION_PERMISSION_PROMPTED, false)
+
+    fun setNotificationPermissionPrompted(prompted: Boolean) {
+        preferences.edit().putBoolean(KEY_NOTIFICATION_PERMISSION_PROMPTED, prompted).apply()
+    }
+
     fun devModeEnabled(): Boolean =
         preferences.getBoolean(KEY_DEV_MODE, false)
 
@@ -92,6 +99,7 @@ class AppSettings(context: Context) {
         const val KEY_THEME_MODE = "theme_mode"
         const val KEY_LANGUAGE = "app_language"
         const val KEY_VIBRATION = "vibration_enabled"
+        const val KEY_NOTIFICATION_PERMISSION_PROMPTED = "notification_permission_prompted"
         const val KEY_DEV_MODE = "dev_mode_enabled"
         const val KEY_UPDATE_CHECKS_ENABLED = "update_checks_enabled"
         const val KEY_LAST_UPDATE_CHECK_EPOCH = "last_update_check_epoch"
