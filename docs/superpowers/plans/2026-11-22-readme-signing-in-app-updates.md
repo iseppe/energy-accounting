@@ -423,13 +423,22 @@ Add a release signing config before `buildTypes`:
 
 ```kotlin
 val releaseKeystorePath = providers.environmentVariable("ANDROID_KEYSTORE_PATH").orNull
+val releaseKeystorePassword = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD").orNull
+val releaseKeyAlias = providers.environmentVariable("ANDROID_KEY_ALIAS").orNull
+val releaseKeyPassword = providers.environmentVariable("ANDROID_KEY_PASSWORD").orNull
+
 signingConfigs {
-    if (releaseKeystorePath != null) {
+    if (
+        releaseKeystorePath != null &&
+        releaseKeystorePassword != null &&
+        releaseKeyAlias != null &&
+        releaseKeyPassword != null
+    ) {
         create("release") {
             storeFile = file(releaseKeystorePath)
-            storePassword = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD").get()
-            keyAlias = providers.environmentVariable("ANDROID_KEY_ALIAS").get()
-            keyPassword = providers.environmentVariable("ANDROID_KEY_PASSWORD").get()
+            storePassword = releaseKeystorePassword
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
         }
     }
 }
