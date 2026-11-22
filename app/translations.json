@@ -694,5 +694,125 @@
   "dev_status_inexact": {
     "en": "Inexact fallback",
     "it": "Fallback inesatto"
+  },
+  "updates_title": {
+    "en": "Updates",
+    "it": "Aggiornamenti"
+  },
+  "update_check_automatic": {
+    "en": "Check for updates automatically",
+    "it": "Controlla gli aggiornamenti automaticamente"
+  },
+  "update_check_now": {
+    "en": "Check now",
+    "it": "Controlla ora"
+  },
+  "update_checking": {
+    "en": "Checking…",
+    "it": "Controllo in corso…"
+  },
+  "update_up_to_date": {
+    "en": "You’re up to date",
+    "it": "Sei aggiornato"
+  },
+  "update_check_failed": {
+    "en": "Couldn’t check for updates",
+    "it": "Impossibile controllare gli aggiornamenti"
+  },
+  "update_current_version": {
+    "en": "Current version",
+    "it": "Versione attuale"
+  },
+  "update_available_title": {
+    "en": "Update available",
+    "it": "Aggiornamento disponibile"
+  },
+  "update_available_version": {
+    "en": "Version %1$s is ready to install.",
+    "it": "La versione %1$s è pronta per l’installazione."
+  },
+  "update_release_notes": {
+    "en": "What’s new",
+    "it": "Novità"
+  },
+  "update_later": {
+    "en": "Later",
+    "it": "Più tardi"
+  },
+  "update_now": {
+    "en": "Update",
+    "it": "Aggiorna"
+  },
+  "update_downloading": {
+    "en": "Downloading update…",
+    "it": "Download dell’aggiornamento…"
+  },
+  "update_download_progress": {
+    "en": "%1$s of %2$s",
+    "it": "%1$s di %2$s"
+  },
+  "update_verifying": {
+    "en": "Verifying update…",
+    "it": "Verifica dell’aggiornamento…"
+  },
+  "update_installing": {
+    "en": "Opening installer…",
+    "it": "Apertura del programma di installazione…"
+  },
+  "update_cancel": {
+    "en": "Cancel",
+    "it": "Annulla"
+  },
+  "update_permission_title": {
+    "en": "Allow app installs",
+    "it": "Consenti installazioni"
+  },
+  "update_permission_body": {
+    "en": "Android needs your permission to install the update. Open the settings and allow installs from Energy Accounting.",
+    "it": "Android ha bisogno del tuo permesso per installare l’aggiornamento. Apri le impostazioni e consenti le installazioni da Energy Accounting."
+  },
+  "update_open_settings": {
+    "en": "Open settings",
+    "it": "Apri impostazioni"
+  },
+  "update_error_title": {
+    "en": "Update failed",
+    "it": "Aggiornamento non riuscito"
+  },
+  "update_error_network": {
+    "en": "Couldn’t reach GitHub. Check your connection and try again.",
+    "it": "Impossibile raggiungere GitHub. Controlla la connessione e riprova."
+  },
+  "update_error_checksum": {
+    "en": "The downloaded file didn’t match the published checksum. It was deleted.",
+    "it": "Il file scaricato non corrisponde al checksum pubblicato. È stato eliminato."
+  },
+  "update_error_signature": {
+    "en": "The update is not signed by the same key as this app. Installation was blocked.",
+    "it": "L’aggiornamento non è firmato con la stessa chiave dell’app. Installazione bloccata."
+  },
+  "update_error_storage": {
+    "en": "Not enough free space to download the update.",
+    "it": "Spazio insufficiente per scaricare l’aggiornamento."
+  },
+  "update_error_installer": {
+    "en": "No installer is available on this device.",
+    "it": "Nessun programma di installazione disponibile sul dispositivo."
+  },
+  "update_error_generic": {
+    "en": "Something went wrong. Try again.",
+    "it": "Qualcosa è andato storto. Riprova."
+  },
+  "update_retry": {
+    "en": "Try again",
+    "it": "Riprova"
+  },
+  "update_view_release": {
+    "en": "View release",
+    "it": "Vedi release"
+  },
+  "update_simulate_dev": {
+    "en": "Show update dialog",
+    "it": "Mostra finestra aggiornamento"
   }
 }

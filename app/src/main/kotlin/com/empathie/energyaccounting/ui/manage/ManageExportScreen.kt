@@ -97,6 +97,8 @@ import com.empathie.energyaccounting.ui.daily.dimensionLabel
 import com.empathie.energyaccounting.ui.daily.timeSlotLabel
 import com.empathie.energyaccounting.ui.theme.LocalEmpathieColors
 import com.empathie.energyaccounting.ui.theme.ThemeMode
+import com.empathie.energyaccounting.ui.update.UpdatesSection
+import com.empathie.energyaccounting.update.UpdateViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -115,7 +117,7 @@ private data class ExportRequest(
 )
 
 @Composable
-fun ManageExportScreen(viewModel: ManageExportViewModel) {
+fun ManageExportScreen(viewModel: ManageExportViewModel, updateViewModel: UpdateViewModel) {
     val context = LocalContext.current
     val activity = context as? Activity
     val scope = rememberCoroutineScope()
@@ -547,6 +549,10 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
             }
         }
 
+        if (!BuildConfig.DEBUG) {
+            item { UpdatesSection(updateViewModel) }
+        }
+
         if (devModeEnabled) {
             item {
                 SectionCard(title = stringResource(R.string.dev_mode_title)) {
@@ -555,6 +561,13 @@ fun ManageExportScreen(viewModel: ManageExportViewModel) {
                         viewModel.disableDevMode()
                     }) {
                         Text(stringResource(R.string.dev_mode_disable))
+                    }
+
+                    TextButton(onClick = {
+                        haptics.tick()
+                        updateViewModel.showDebugDialog()
+                    }) {
+                        Text(stringResource(R.string.update_simulate_dev))
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {

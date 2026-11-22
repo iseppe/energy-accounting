@@ -16,6 +16,7 @@ import androidx.room.withTransaction
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.lifecycle.viewModelScope
+import com.empathie.energyaccounting.BuildConfig
 import com.empathie.energyaccounting.R
 import com.empathie.energyaccounting.data.diagnostics.DebugLogExporter
 import com.empathie.energyaccounting.data.export.BackupSerializer
@@ -28,6 +29,11 @@ import com.empathie.energyaccounting.domain.model.Direction
 import com.empathie.energyaccounting.reminder.ReminderScheduler
 import com.empathie.energyaccounting.ui.manage.ManageExportScreen
 import com.empathie.energyaccounting.ui.manage.ManageExportViewModel
+import com.empathie.energyaccounting.update.AndroidApkInstaller
+import com.empathie.energyaccounting.update.AndroidApkVerifier
+import com.empathie.energyaccounting.update.GitHubReleaseSource
+import com.empathie.energyaccounting.update.SemanticVersion
+import com.empathie.energyaccounting.update.UpdateViewModel
 import com.empathie.energyaccounting.ui.theme.EmpathieTheme
 import com.empathie.energyaccounting.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.first
@@ -48,6 +54,7 @@ class ActivityTemplatesSectionTest {
     private lateinit var db: EnergyAccountingDatabase
     private lateinit var repo: EnergyAccountingRepository
     private lateinit var vm: ManageExportViewModel
+    private lateinit var updateVm: UpdateViewModel
     private var showScreen by mutableStateOf(true)
 
     @Before
@@ -67,7 +74,17 @@ class ActivityTemplatesSectionTest {
             }
         }
         vm = ManageExportViewModel(repo, BackupSerializer(db), PractitionerPdfGenerator(), ReminderScheduler(context), AppSettings(context), DebugLogExporter(db))
-        compose.setContent { if (showScreen) EmpathieTheme(ThemeMode.LIGHT) { ManageExportScreen(vm) } }
+        updateVm = UpdateViewModel(
+            source = GitHubReleaseSource(BuildConfig.UPDATE_REPO),
+            settings = AppSettings(context),
+            verifier = AndroidApkVerifier(context),
+            installer = AndroidApkInstaller(context),
+            cacheDir = context.cacheDir,
+            currentVersion = SemanticVersion(0, 0, 0),
+            currentVersionName = BuildConfig.VERSION_NAME,
+            isReleaseBuild = false,
+        )
+        compose.setContent { if (showScreen) EmpathieTheme(ThemeMode.LIGHT) { ManageExportScreen(vm, updateVm) } }
         compose.waitUntil(5_000) { vm.templates.value.size == 2 }
     }
 

@@ -32,6 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -54,6 +56,13 @@ import com.empathie.energyaccounting.ui.manage.ManageExportScreen
 import com.empathie.energyaccounting.ui.manage.ManageExportViewModel
 import com.empathie.energyaccounting.ui.theme.EmpathieTheme
 import com.empathie.energyaccounting.ui.theme.LocalEmpathieColors
+import com.empathie.energyaccounting.ui.update.UpdateDialog
+import com.empathie.energyaccounting.update.AndroidApkInstaller
+import com.empathie.energyaccounting.update.AndroidApkVerifier
+import com.empathie.energyaccounting.update.GitHubReleaseSource
+import com.empathie.energyaccounting.update.SemanticVersion
+import com.empathie.energyaccounting.update.UpdateViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
@@ -122,6 +131,24 @@ class MainActivity : ComponentActivity() {
                 }
             )
 
+            val updateViewModel: UpdateViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer {
+                        UpdateViewModel(
+                            source = GitHubReleaseSource(BuildConfig.UPDATE_REPO),
+                            settings = app.settings,
+                            verifier = AndroidApkVerifier(app),
+                            installer = AndroidApkInstaller(app),
+                            cacheDir = app.cacheDir,
+                            currentVersion = SemanticVersion.parse(BuildConfig.VERSION_NAME)
+                                ?: SemanticVersion(0, 0, 0),
+                            currentVersionName = BuildConfig.VERSION_NAME,
+                            isReleaseBuild = !BuildConfig.DEBUG,
+                        )
+                    }
+                }
+            )
+
             val themeMode by manageViewModel.themeMode.collectAsStateWithLifecycle()
             val vibrationEnabled by manageViewModel.vibrationEnabled.collectAsStateWithLifecycle()
             val deepLink by deepLinkEvents.collectAsStateWithLifecycle()
@@ -146,6 +173,14 @@ class MainActivity : ComponentActivity() {
                 EmpathieTheme(themeMode = themeMode) {
                     SyncSystemBars()
 
+                    LaunchedEffect(Unit) {
+                        delay(1_500)
+                        updateViewModel.checkOnLaunch()
+                    }
+                    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+                        updateViewModel.onResume()
+                    }
+
                     BackHandler(enabled = selectedTab != 0) {
                         selectedTab = 0
                     }
@@ -156,7 +191,10 @@ class MainActivity : ComponentActivity() {
                         dailyViewModel = dailyViewModel,
                         insightsViewModel = insightsViewModel,
                         manageViewModel = manageViewModel,
+                        updateViewModel = updateViewModel,
                     )
+
+                    UpdateDialog(updateViewModel)
                 }
             }
         }
@@ -199,6 +237,7 @@ private fun AppShell(
     dailyViewModel: DailyAccountViewModel,
     insightsViewModel: InsightsViewModel,
     manageViewModel: ManageExportViewModel,
+    updateViewModel: UpdateViewModel,
 ) {
     val tabs = listOf(
         R.string.tab_daily_account to Icons.Filled.Today,
@@ -232,7 +271,7 @@ private fun AppShell(
             when (selectedTab) {
                 0 -> DailyAccountScreen(dailyViewModel)
                 1 -> InsightsScreen(insightsViewModel)
-                else -> ManageExportScreen(manageViewModel)
+                else -> ManageExportScreen(manageViewModel, updateViewModel)
             }
         }
     }
