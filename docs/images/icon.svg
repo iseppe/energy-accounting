@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Empathie Energy Accounting">
+  <title>Empathie Energy Accounting</title>
+  <!-- Brain and bolt geometry: Lucide, ISC license. -->
+  <defs>
+    <clipPath id="left-hemisphere">
+      <rect x="0" y="0" width="12" height="24" />
+    </clipPath>
+    <clipPath id="right-hemisphere">
+      <rect x="12" y="0" width="12" height="24" />
+    </clipPath>
+  </defs>
+
+  <rect x="0" y="0" width="1024" height="1024" rx="220" fill="#131720" />
+
+  <g transform="translate(152 152) scale(30)">
+    <g clip-path="url(#left-hemisphere)">
+      <path
+        d="M12 18V5 M15 13a4.17 4.17 0 01-3-4 4.17 4.17 0 01-3 4 M17.707 6.294A3 3 0 1012 5a3 3 0 10-5.707 1.294 M17.996 5.125a4 4 0 012.526 5.77 M18 18a4 4 0 002-7.465 M19.967 17.482a4 4 0 11-7.967.517 4 4 0 11-7.967-.517 M6 18a4 4 0 01-2-7.465 M6.004 5.125a4 4 0 00-2.526 5.77"
+        fill="none"
+        stroke="#5EC2A6"
+        stroke-width="1.6"
+        stroke-linecap="round"
+        stroke-linejoin="round" />
+    </g>
+    <g clip-path="url(#right-hemisphere)">
+      <path
+        d="M12 18V5 M15 13a4.17 4.17 0 01-3-4 4.17 4.17 0 01-3 4 M17.707 6.294A3 3 0 1012 5a3 3 0 10-5.707 1.294 M17.996 5.125a4 4 0 012.526 5.77 M18 18a4 4 0 002-7.465 M19.967 17.482a4 4 0 11-7.967.517 4 4 0 11-7.967-.517 M6 18a4 4 0 01-2-7.465 M6.004 5.125a4 4 0 00-2.526 5.77"
+        fill="none"
+        stroke="#E29B61"
+        stroke-width="1.6"
+        stroke-linecap="round"
+        stroke-linejoin="round" />
+    </g>
+  </g>
+
+  <g transform="translate(512 512) scale(15) translate(-12 -12)">
+    <path
+      d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z"
+      fill="#F7F5F0"
+      stroke="#131720"
+      stroke-width="1.2"
+      stroke-linejoin="round"
+      paint-order="stroke" />
+  </g>
+</svg>
