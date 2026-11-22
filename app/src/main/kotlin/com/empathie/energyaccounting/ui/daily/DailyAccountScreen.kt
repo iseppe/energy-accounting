@@ -4,6 +4,10 @@ import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -38,16 +43,31 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -64,6 +84,7 @@ import com.empathie.energyaccounting.domain.service.EnergyFormatter
 import com.empathie.energyaccounting.ui.common.LocalAppHaptics
 import com.empathie.energyaccounting.ui.theme.LocalEmpathieColors
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -83,7 +104,31 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
     val today by viewModel.todayDate.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val haptics = LocalAppHaptics.current
+    val listState = rememberLazyListState()
+    val dragState = remember(selectedDate) { EntryDragState() }
+    val latestAccount by rememberUpdatedState(account)
+    var listCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val edgeSize = with(LocalDensity.current) { 64.dp.toPx() }
     var pendingDeleteId by remember { mutableStateOf<Long?>(null) }
+
+    LaunchedEffect(dragState.draggedEntry?.id) {
+        while (dragState.draggedEntry != null) {
+            val bounds = listCoordinates?.takeIf { it.isAttached }?.boundsInRoot()
+            if (bounds != null) {
+                val y = dragState.pointer.y
+                val amount = when {
+                    y < bounds.top + edgeSize -> -16f * ((bounds.top + edgeSize - y) / edgeSize).coerceIn(0f, 1f)
+                    y > bounds.bottom - edgeSize -> 16f * ((y - (bounds.bottom - edgeSize)) / edgeSize).coerceIn(0f, 1f)
+                    else -> 0f
+                }
+                if (amount != 0f) {
+                    listState.scrollBy(amount)
+                    dragState.update(dragState.pointer, latestAccount)
+                }
+            }
+            delay(16)
+        }
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -113,18 +158,61 @@ fun DailyAccountScreen(viewModel: DailyAccountViewModel) {
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp)
+                .onGloballyPositioned { listCoordinates = it }
+                .pointerInput(dragState) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val held = awaitLongPressOrCancellation(down.id) ?: return@awaitEachGesture
+                        val root = listCoordinates?.takeIf { it.isAttached }?.localToRoot(held.position)
+                            ?: return@awaitEachGesture
+                        if (!dragState.begin(root, latestAccount)) return@awaitEachGesture
+                        haptics.tick()
+                        try {
+                            while (true) {
+                                // Intercept the drag before LazyColumn's scroll gesture consumes it.
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) {
+                                    if (event.type == PointerEventType.Release && !change.isConsumed) {
+                                        change.consume()
+                                        val entryId = dragState.draggedEntry?.id
+                                        val release = listCoordinates?.takeIf { it.isAttached }?.localToRoot(change.position)
+                                        if (release != null) dragState.update(release, latestAccount)
+                                        val target = if (release != null) dragState.target else null
+                                        if (entryId != null && target != null) {
+                                            scope.launch { viewModel.moveEntry(entryId, target.slot, target.index) }
+                                        }
+                                    }
+                                    break
+                                }
+                                if (change.positionChanged()) {
+                                    change.consume()
+                                    listCoordinates?.takeIf { it.isAttached }?.localToRoot(change.position)?.let {
+                                        dragState.update(it, latestAccount)
+                                    }
+                                }
+                            }
+                        } finally {
+                            dragState.clear()
+                        }
+                    }
+                },
+            state = listState,
             contentPadding = PaddingValues(top = 12.dp, bottom = 88.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
                 DailySummaryCard(account)
             }
-            items(TimeSlot.entries) { timeSlot ->
+            items(TimeSlot.entries, key = { it.name }) { timeSlot ->
                 TimeSlotCard(
                     ledger = account.ledgerFor(timeSlot),
+                    account = account,
+                    dragState = dragState,
                     onAddToSlot = { viewModel.requestNewEntrySheet(timeSlot) },
                     onEntryClick = viewModel::openEditEntrySheet,
+                    onMove = { entryId, slot, index -> scope.launch { viewModel.moveEntry(entryId, slot, index) } },
                 )
             }
         }
@@ -401,16 +489,26 @@ private fun SummaryPill(
 @Composable
 private fun TimeSlotCard(
     ledger: TimeSlotLedger,
+    account: DailyAccount,
+    dragState: EntryDragState,
     onAddToSlot: () -> Unit,
     onEntryClick: (Entry) -> Unit,
+    onMove: (Long, TimeSlot, Int) -> Unit,
 ) {
     val colors = LocalEmpathieColors.current
     val context = LocalContext.current
     val haptics = LocalAppHaptics.current
+    DisposableEffect(dragState, ledger.timeSlot) {
+        onDispose { dragState.slotBounds.remove(ledger.timeSlot) }
+    }
+    val destinationEntries = ledger.entries.filterNot { it.id == dragState.draggedEntry?.id }
+    val target = dragState.target?.takeIf { it.slot == ledger.timeSlot }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().onGloballyPositioned {
+            dragState.slotBounds[ledger.timeSlot] = it.boundsInRoot()
+        },
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
@@ -453,6 +551,7 @@ private fun TimeSlotCard(
             }
 
             if (ledger.entries.isEmpty()) {
+                if (target?.index == 0) DropIndicator()
                 Text(
                     text = stringResource(R.string.no_entries),
                     style = MaterialTheme.typography.bodySmall,
@@ -461,12 +560,38 @@ private fun TimeSlotCard(
                 )
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ledger.entries.forEach { entry ->
-                        EntryRow(entry = entry, onClick = {
-                            haptics.tick()
-                            onEntryClick(entry)
-                        })
+                    ledger.entries.forEachIndexed { index, entry ->
+                        DisposableEffect(dragState, entry.id) {
+                            onDispose { dragState.entryBounds.remove(entry.id) }
+                        }
+                        val destinationIndex = destinationEntries.indexOfFirst { it.id == entry.id }
+                        if (destinationIndex >= 0 && target?.index == destinationIndex) DropIndicator()
+                        val actions = buildList {
+                            if (index > 0) add(CustomAccessibilityAction(context.getString(R.string.move_entry_up)) {
+                                onMove(entry.id, ledger.timeSlot, index - 1); true
+                            })
+                            if (index < ledger.entries.lastIndex) add(CustomAccessibilityAction(context.getString(R.string.move_entry_down)) {
+                                onMove(entry.id, ledger.timeSlot, index + 1); true
+                            })
+                            TimeSlot.entries.filterNot { it == ledger.timeSlot }.forEach { slot ->
+                                add(CustomAccessibilityAction(context.getString(R.string.move_entry_to_slot, timeSlotLabel(context, slot))) {
+                                    onMove(entry.id, slot, account.ledgerFor(slot).entries.size); true
+                                })
+                            }
+                        }
+                        EntryRow(
+                            entry = entry,
+                            modifier = Modifier
+                                .onGloballyPositioned { dragState.entryBounds[entry.id] = it.boundsInRoot() }
+                                .alpha(if (dragState.draggedEntry?.id == entry.id) 0.55f else 1f)
+                                .semantics { customActions = actions },
+                            onClick = {
+                                haptics.tick()
+                                onEntryClick(entry)
+                            },
+                        )
                     }
+                    if (target?.index == destinationEntries.size) DropIndicator()
                 }
             }
         }
@@ -474,13 +599,18 @@ private fun TimeSlotCard(
 }
 
 @Composable
-private fun EntryRow(entry: Entry, onClick: () -> Unit) {
+private fun DropIndicator() {
+    Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(MaterialTheme.colorScheme.primary))
+}
+
+@Composable
+private fun EntryRow(entry: Entry, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = LocalEmpathieColors.current
     val context = LocalContext.current
     val directionColor = if (entry.direction == Direction.GAIN) colors.gain else colors.spend
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
             .clip(RoundedCornerShape(10.dp))

@@ -28,7 +28,7 @@ object CsvExporter {
     ): String = buildString {
         appendLine(HEADER.joinToString(","))
         entries
-            .sortedWith(compareBy({ it.date }, { it.timeSlot.ordinal }, { it.createdAtEpochMillis }))
+            .sortedWith(compareBy({ it.date }, { it.timeSlot.ordinal }, { it.positionInSlot }, { it.createdAtEpochMillis }, { it.id }))
             .forEach { entry ->
                 appendLine(
                     listOf(

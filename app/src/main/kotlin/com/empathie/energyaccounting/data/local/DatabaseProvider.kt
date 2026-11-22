@@ -22,7 +22,7 @@ object DatabaseProvider {
                 EnergyAccountingDatabase::class.java,
                 DATABASE_NAME,
             )
-                .addMigrations(EnergyAccountingDatabase.MIGRATION_1_2)
+                .addMigrations(EnergyAccountingDatabase.MIGRATION_1_2, EnergyAccountingDatabase.MIGRATION_2_3)
                 .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
                 .build()
                 .also { instance = it }

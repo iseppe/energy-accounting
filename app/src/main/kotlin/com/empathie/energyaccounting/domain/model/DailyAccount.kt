@@ -33,7 +33,7 @@ data class DailyAccount(
             val slots = TimeSlot.entries.associateWith { timeSlot ->
                 val slotEntries = entries
                     .filter { it.timeSlot == timeSlot }
-                    .sortedBy { it.createdAtEpochMillis }
+                    .sortedWith(compareBy({ it.positionInSlot }, { it.createdAtEpochMillis }, { it.id }))
                 val gain = slotEntries.sumOf { it.signedValue().coerceAtLeast(0) }
                 val spend = slotEntries.sumOf { (-it.signedValue()).coerceAtLeast(0) }
                 TimeSlotLedger(

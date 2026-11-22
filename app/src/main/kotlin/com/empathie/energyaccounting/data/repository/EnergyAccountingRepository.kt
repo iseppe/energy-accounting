@@ -104,12 +104,21 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
      */
     suspend fun saveEntry(entry: Entry, updateTemplateDefaults: Boolean = false): Long =
         db.withTransaction {
+            val existing = if (entry.id == 0L) null else dao.getEntry(entry.id)
+            val position = if (existing != null && existing.dateIso == entry.date.toString() &&
+                existing.timeSlot == entry.timeSlot.name
+            ) {
+                existing.positionInSlot
+            } else {
+                dao.nextPositionForSlot(entry.date.toString(), entry.timeSlot.name)
+            }
+            val entity = entry.toEntity().copy(positionInSlot = position)
             val savedId = if (entry.id == 0L) {
-                val newId = dao.insertEntry(entry.toEntity())
+                val newId = dao.insertEntry(entity)
                 touchTemplate(entry, incrementUsage = true, updateDefaults = updateTemplateDefaults)
                 newId
             } else {
-                dao.updateEntry(entry.toEntity())
+                dao.updateEntry(entity)
                 if (updateTemplateDefaults) {
                     touchTemplate(entry, incrementUsage = false, updateDefaults = true)
                 }
@@ -126,6 +135,35 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
         dao.deleteEntryById(entryId)
         AppLogger.info("Repository", "Deleted entry $entryId")
     }
+
+    /** Moves an entry within the selected day without touching its template or timestamp. */
+    suspend fun moveEntry(date: LocalDate, entryId: Long, targetSlot: TimeSlot, targetIndex: Int): Boolean =
+        db.withTransaction {
+            val entries = dao.getEntryEntitiesForDate(date.toString())
+            val moving = entries.firstOrNull { it.id == entryId } ?: return@withTransaction false
+            val source = entries.filter { it.timeSlot == moving.timeSlot }.toMutableList()
+            val sourceIndex = source.indexOfFirst { it.id == entryId }
+            val sameSlot = moving.timeSlot == targetSlot.name
+            val destination = if (sameSlot) source else {
+                entries.filter { it.timeSlot == targetSlot.name }.toMutableList()
+            }
+
+            source.removeAt(sourceIndex)
+            if (targetIndex !in 0..destination.size) return@withTransaction false
+            if (sameSlot && sourceIndex == targetIndex) return@withTransaction true
+
+            destination.add(targetIndex, moving.copy(timeSlot = targetSlot.name))
+            suspend fun savePositions(slotEntries: List<EntryEntity>) {
+                slotEntries.forEachIndexed { index, entry ->
+                    val updated = entry.copy(positionInSlot = index.toLong())
+                    val original = entries.first { it.id == entry.id }
+                    if (updated != original) dao.updateEntry(updated)
+                }
+            }
+            if (!sameSlot) savePositions(source)
+            savePositions(destination)
+            true
+        }
 
     suspend fun createCustomDimension(name: String, colorIndex: Int): Long {
         val trimmed = name.trim()
@@ -268,6 +306,7 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
         energyValue = entry.energyValue,
         dimension = dimension.toDomain(),
         createdAtEpochMillis = entry.createdAtEpochMillis,
+        positionInSlot = entry.positionInSlot,
     )
 
     private fun Entry.toEntity(): EntryEntity = EntryEntity(
@@ -280,6 +319,7 @@ class EnergyAccountingRepository(private val db: EnergyAccountingDatabase) {
         energyValue = energyValue,
         dimensionId = dimension.id,
         createdAtEpochMillis = createdAtEpochMillis,
+        positionInSlot = positionInSlot,
     )
 
     private fun ActivityTemplate.toEntity(): ActivityTemplateEntity = ActivityTemplateEntity(

@@ -285,6 +285,9 @@ class DailyAccountViewModel(
         _draftState.value = null
     }
 
+    suspend fun moveEntry(entryId: Long, targetSlot: TimeSlot, targetIndex: Int): Boolean =
+        repo.moveEntry(_selectedDate.value, entryId, targetSlot, targetIndex)
+
     private fun resolveTimeSlot(preferredSlot: TimeSlot?): TimeSlot =
         preferredSlot ?: if (_selectedDate.value == today) {
             TimeSlot.defaultForTime(LocalTime.now(clock))

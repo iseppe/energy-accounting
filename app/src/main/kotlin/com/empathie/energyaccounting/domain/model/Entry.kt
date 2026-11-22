@@ -21,6 +21,7 @@ class Entry(
     val energyValue: Int,
     val dimension: EnergyDimension,
     val createdAtEpochMillis: Long,
+    val positionInSlot: Long = 0L,
 ) {
     init {
         require(energyValue in MIN_ENERGY_VALUE..MAX_ENERGY_VALUE) {
@@ -43,6 +44,7 @@ class Entry(
         energyValue: Int = this.energyValue,
         dimension: EnergyDimension = this.dimension,
         createdAtEpochMillis: Long = this.createdAtEpochMillis,
+        positionInSlot: Long = this.positionInSlot,
     ): Entry = Entry(
         id = id,
         date = date,
@@ -53,6 +55,7 @@ class Entry(
         energyValue = energyValue,
         dimension = dimension,
         createdAtEpochMillis = createdAtEpochMillis,
+        positionInSlot = positionInSlot,
     )
 
     override fun equals(other: Any?): Boolean {
@@ -66,7 +69,8 @@ class Entry(
             direction == other.direction &&
             energyValue == other.energyValue &&
             dimension == other.dimension &&
-            createdAtEpochMillis == other.createdAtEpochMillis
+            createdAtEpochMillis == other.createdAtEpochMillis &&
+            positionInSlot == other.positionInSlot
     }
 
     override fun hashCode(): Int = listOf(
@@ -79,12 +83,13 @@ class Entry(
         energyValue,
         dimension,
         createdAtEpochMillis,
+        positionInSlot,
     ).hashCode()
 
     override fun toString(): String =
         "Entry(id=$id, date=$date, timeSlot=$timeSlot, activity='$activity', " +
             "situationalNote=$situationalNote, direction=$direction, energyValue=$energyValue, " +
-            "dimension=$dimension, createdAtEpochMillis=$createdAtEpochMillis)"
+            "dimension=$dimension, createdAtEpochMillis=$createdAtEpochMillis, positionInSlot=$positionInSlot)"
 
     companion object {
         const val MIN_ENERGY_VALUE = 1

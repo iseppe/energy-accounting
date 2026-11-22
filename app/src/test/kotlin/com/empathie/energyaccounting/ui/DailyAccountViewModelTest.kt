@@ -146,6 +146,68 @@ class DailyAccountViewModelTest {
     }
 
     @Test
+    fun `editing reordered entries preserves their position or appends to the changed slot`() = runTest {
+        val date = LocalDate.of(2026, 11, 12)
+        val dimension = repo.observeActiveDimensions().first().first()
+        suspend fun insert(name: String, slot: TimeSlot, createdAt: Long) = repo.saveEntry(
+            Entry(
+                date = date,
+                timeSlot = slot,
+                activity = name,
+                situationalNote = null,
+                direction = Direction.SPEND,
+                energyValue = 10,
+                dimension = dimension,
+                createdAtEpochMillis = createdAt,
+            )
+        )
+        val a = insert("A", TimeSlot.LATE_MORNING, 100L)
+        val b = insert("B", TimeSlot.LATE_MORNING, 200L)
+        insert("D", TimeSlot.AFTERNOON, 50L)
+        assertTrue(repo.moveEntry(date, b, TimeSlot.LATE_MORNING, 0))
+
+        val vm = DailyAccountViewModel(repo, fixedClock)
+        val reordered = repo.observeDailyAccount(date).first().ledgerFor(TimeSlot.LATE_MORNING).entries
+        vm.openEditEntrySheet(reordered.first { it.id == b })
+        vm.onSituationalNoteChange("edited")
+        vm.saveDraft()
+        assertEquals(listOf("B", "A"), repo.observeDailyAccount(date).first()
+            .ledgerFor(TimeSlot.LATE_MORNING).entries.map { it.activity })
+
+        val entryA = repo.observeDailyAccount(date).first().ledgerFor(TimeSlot.LATE_MORNING).entries.first { it.id == a }
+        vm.openEditEntrySheet(entryA)
+        vm.onTimeSlotChange(TimeSlot.AFTERNOON)
+        vm.saveDraft()
+        val afternoon = repo.observeDailyAccount(date).first().ledgerFor(TimeSlot.AFTERNOON).entries
+        assertEquals(listOf("D", "A"), afternoon.map { it.activity })
+        assertEquals(100L, afternoon.last().createdAtEpochMillis)
+    }
+
+    @Test
+    fun `moving entries is restricted to the selected date`() = runTest {
+        val today = LocalDate.of(2026, 11, 12)
+        val otherDay = today.plusDays(1)
+        val dimension = repo.observeActiveDimensions().first().first()
+        suspend fun insert(date: LocalDate, name: String) = repo.saveEntry(
+            Entry(
+                date = date, timeSlot = TimeSlot.LATE_MORNING, activity = name,
+                situationalNote = null, direction = Direction.SPEND, energyValue = 10,
+                dimension = dimension, createdAtEpochMillis = 100L,
+            )
+        )
+        val todayId = insert(today, "Today")
+        val otherId = insert(otherDay, "Tomorrow")
+        val vm = DailyAccountViewModel(repo, fixedClock)
+        vm.selectDate(otherDay)
+        assertFalse(vm.moveEntry(todayId, TimeSlot.AFTERNOON, 0))
+        assertTrue(vm.moveEntry(otherId, TimeSlot.AFTERNOON, 0))
+        assertEquals(listOf("Today"), repo.observeDailyAccount(today).first()
+            .ledgerFor(TimeSlot.LATE_MORNING).entries.map { it.activity })
+        assertEquals(listOf("Tomorrow"), repo.observeDailyAccount(otherDay).first()
+            .ledgerFor(TimeSlot.AFTERNOON).entries.map { it.activity })
+    }
+
+    @Test
     fun `openNewEntrySheet closes an open calendar sheet`() {
         val vm = DailyAccountViewModel(repo, fixedClock)
         vm.openCalendar()
