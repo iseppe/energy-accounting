@@ -12,3 +12,6 @@ captures/
 .kotlin/
 .superpowers/
 .worktrees/
+*.jks
+*.keystore
+keystore.properties

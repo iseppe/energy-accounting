@@ -1,9 +1,6 @@
 import groovy.json.JsonSlurper
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.io.File
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
 plugins {
     alias(libs.plugins.android.application)
@@ -21,8 +18,8 @@ fun gitShortSha(): String = runCatching {
         .trim()
 }.getOrDefault("nogit")
 
-val buildId: String = "v0.2.0-${gitShortSha()}-" + LocalDateTime.now(ZoneOffset.UTC)
-    .format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmm"))
+val appVersionName: String = providers.gradleProperty("appVersionName").orElse("0.3.0").get()
+val appVersionCode: Int = providers.gradleProperty("appVersionCode").map { it.toInt() }.orElse(300).get()
 
 android {
     namespace = "com.empathie.energyaccounting"
@@ -32,17 +29,31 @@ android {
         applicationId = "com.empathie.energyaccounting"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
-        buildConfigField("String", "BUILD_ID", "\"$buildId\"")
+        buildConfigField("String", "BUILD_ID", "\"v$appVersionName-${gitShortSha()}\"")
+        buildConfigField("String", "UPDATE_REPO", "\"iseppe/energy-accounting\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    val releaseKeystorePath = providers.environmentVariable("ANDROID_KEYSTORE_PATH").orNull
+    signingConfigs {
+        if (releaseKeystorePath != null) {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD").get()
+                keyAlias = providers.environmentVariable("ANDROID_KEY_ALIAS").get()
+                keyPassword = providers.environmentVariable("ANDROID_KEY_PASSWORD").get()
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
