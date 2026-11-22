@@ -61,7 +61,15 @@ fun UpdateDialog(viewModel: UpdateViewModel) {
     val maxSheetHeight = (LocalConfiguration.current.screenHeightDp * 0.85f).dp
 
     ModalBottomSheet(
-        onDismissRequest = viewModel::onLater,
+        onDismissRequest = {
+            when (state) {
+                is UpdateUiState.Available,
+                is UpdateUiState.Error,
+                is UpdateUiState.PermissionRequired -> viewModel.onLater()
+
+                else -> Unit
+            }
+        },
         sheetState = sheetState,
     ) {
         Column(
@@ -77,6 +85,7 @@ fun UpdateDialog(viewModel: UpdateViewModel) {
 
                 is UpdateUiState.Available -> AvailableContent(
                     state = current,
+                    notesModifier = Modifier.weight(1f, fill = false),
                     onLater = {
                         haptics.tick()
                         viewModel.onLater()
@@ -157,9 +166,12 @@ private fun DialogHeader(icon: ImageVector, titleRes: Int) {
 }
 
 @Composable
-private fun ReleaseNotes(notes: String) {
+private fun ReleaseNotes(notes: String, modifier: Modifier = Modifier) {
     if (notes.isBlank()) return
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         Text(
             text = stringResource(R.string.update_release_notes),
             style = MaterialTheme.typography.titleSmall,
@@ -175,8 +187,9 @@ private fun ReleaseNotes(notes: String) {
 }
 
 @Composable
-private fun AvailableContent(
+internal fun AvailableContent(
     state: UpdateUiState.Available,
+    notesModifier: Modifier = Modifier,
     onLater: () -> Unit,
     onUpdate: () -> Unit,
 ) {
@@ -185,7 +198,7 @@ private fun AvailableContent(
         text = stringResource(R.string.update_available_version, state.info.version.toString()),
         style = MaterialTheme.typography.bodyMedium,
     )
-    ReleaseNotes(state.info.releaseNotes)
+    ReleaseNotes(state.info.releaseNotes, notesModifier)
     HorizontalDivider()
     Row(
         modifier = Modifier.fillMaxWidth(),

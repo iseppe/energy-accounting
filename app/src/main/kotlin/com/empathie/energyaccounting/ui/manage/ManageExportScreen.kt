@@ -74,6 +74,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -488,7 +489,13 @@ fun ManageExportScreen(viewModel: ManageExportViewModel, updateViewModel: Update
                             Manifest.permission.POST_NOTIFICATIONS,
                         ) != PackageManager.PERMISSION_GRANTED
                     NotificationPermissionCard(
-                        showAllow = permissionMissing,
+                        showAllow = permissionMissing && (
+                            activity == null ||
+                                ActivityCompat.shouldShowRequestPermissionRationale(
+                                    activity,
+                                    Manifest.permission.POST_NOTIFICATIONS,
+                                )
+                            ),
                         onAllow = {
                             haptics.tick()
                             requestNotificationPermissionFromCard.launch(
@@ -978,18 +985,23 @@ private fun NotificationPermissionCard(
                 text = stringResource(R.string.notification_permission_card_body),
                 style = MaterialTheme.typography.bodySmall,
             )
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                TextButton(onClick = onOpenSettings) {
-                    Text(stringResource(R.string.notification_permission_open_settings))
-                }
                 if (showAllow) {
-                    Button(onClick = onAllow) {
+                    Button(
+                        onClick = onAllow,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
                         Text(stringResource(R.string.notification_permission_allow))
                     }
+                }
+                TextButton(
+                    onClick = onOpenSettings,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.notification_permission_open_settings))
                 }
             }
         }
