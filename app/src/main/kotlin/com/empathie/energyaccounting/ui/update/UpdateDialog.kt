@@ -271,7 +271,6 @@ private fun PermissionContent(onLater: () -> Unit, onOpenSettings: () -> Unit) {
 @Composable
 private fun InstallingContent() {
     DialogHeader(Icons.Filled.SystemUpdate, R.string.update_installing)
-    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
 }
 
 @Composable
@@ -308,9 +307,10 @@ private fun ErrorContent(
     }
 }
 
-private fun errorMessageRes(state: UpdateUiState.Error): Int = when (val error = state.error) {
+internal fun errorMessageRes(state: UpdateUiState.Error): Int = when (val error = state.error) {
     VerificationError.CHECKSUM -> R.string.update_error_checksum
-    VerificationError.PACKAGE, VerificationError.SIGNATURE -> R.string.update_error_signature
+    VerificationError.PACKAGE -> R.string.update_error_generic
+    VerificationError.SIGNATURE -> R.string.update_error_signature
     VerificationError.UNREADABLE -> R.string.update_error_generic
     null -> when (state.kind) {
         UpdateError.NETWORK -> R.string.update_error_network
