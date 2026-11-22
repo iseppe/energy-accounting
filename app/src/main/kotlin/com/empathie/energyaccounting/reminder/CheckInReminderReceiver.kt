@@ -9,6 +9,8 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import com.empathie.energyaccounting.R
 import com.empathie.energyaccounting.data.diagnostics.AppLogger
 import com.empathie.energyaccounting.data.local.DatabaseProvider
@@ -196,7 +198,9 @@ class CheckInReminderReceiver : BroadcastReceiver() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
 
-            val notification = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+            val largeIcon = ContextCompat.getDrawable(context, R.mipmap.ic_launcher)
+                ?.toBitmap(width = 192, height = 192)
+            val builder = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(context.getString(R.string.notification_title))
                 .setContentText(
@@ -206,10 +210,12 @@ class CheckInReminderReceiver : BroadcastReceiver() {
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setOnlyAlertOnce(true)
-                .build()
+            if (largeIcon != null) {
+                builder.setLargeIcon(largeIcon)
+            }
 
             NotificationManagerCompat.from(context)
-                .notify(NOTIFICATION_ID_BASE + timeSlot.ordinal, notification)
+                .notify(NOTIFICATION_ID_BASE + timeSlot.ordinal, builder.build())
         }
 
         private fun Context.slotLabel(timeSlot: TimeSlot): String = getString(
