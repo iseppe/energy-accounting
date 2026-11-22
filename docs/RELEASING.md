@@ -1,4 +1,4 @@
-# Releasing Empathie Energy Accounting
+# Releasing Energy Accounting
 
 Maintainer notes for signing, versioning, and publishing release APKs.
 No secret values belong in this file or anywhere in the repository.
@@ -8,6 +8,11 @@ No secret values belong in this file or anywhere in the repository.
 - Keystore: `~/.android/keystores/empathie-release.jks` (PKCS#12, RSA 4096-bit, validity 10,000 days).
 - Key alias: `empathie`.
 - Password: stored in `~/.android/keystores/empathie-release.password` (mode 600), kept beside the keystore and in the owner's password manager. The keystore and its password file are mode 600 inside a mode-700 directory; keep them that way.
+
+The keystore path, key alias `empathie`, and certificate DN
+`CN=Empathie Energy Accounting, O=Empathie, C=IT` keep the historical
+“Empathie” naming: they are the permanent signing identity. They are not
+user-visible, and they must not be renamed or regenerated.
 
 **The key is permanent.** Android app updates must be signed with the same key
 for the lifetime of the app. If the keystore or its password is lost, installed
@@ -129,7 +134,7 @@ unnecessary, and v3 exists only for key rotation. `aapt` must report the expecte
 4. Watch the release workflow in the Actions tab of `iseppe/energy-accounting`.
    It runs the unit tests, builds a signed `assembleRelease` from the
    tag-derived version, and publishes a GitHub Release with
-   `empathie-energy-accounting-v<version>.apk` and `SHA256SUMS`.
+   `energy-accounting-v<version>.apk` and `SHA256SUMS`.
 5. Verify the published release:
    - Both assets exist and the release body is the intended notes.
    - `sha256sum -c SHA256SUMS` matches the downloaded APK.
@@ -164,14 +169,13 @@ over them. Users moving from a debug build must:
 This warning must appear in the README and in the release notes of the first
 signed release.
 
-## Temporary `v0.4.1` updater test
+## Live updater test (deferred)
 
-Once the repository is public and `v0.4.0` (the updater release) is out, a
-temporary `v0.4.1` release may be created **from the same commit** solely to
-exercise the in-app updater end to end (update check → download → checksum and
-signature verification → install). Afterwards, clean up: delete the temporary
-release and the `v0.4.1` tag. It is a test artifact, not a shipped version.
-Running this live test is deferred until the owner explicitly asks for it.
+Once the repository is public and a newer signed release exists, the in-app
+updater can be exercised end to end (update check → download → checksum and
+signature verification → install). Use a real signed release; do not create and
+delete a version that has already shipped. Running this live test is deferred
+until the owner explicitly asks for it.
 
 ## Backup gate
 

@@ -294,14 +294,14 @@ class UpdateViewModel(
             UpdateInfo(
                 version = next,
                 tagName = "v$next",
-                releaseName = "Empathie Energy Accounting v$next (preview)",
+                releaseName = "Energy Accounting v$next (preview)",
                 releaseNotes = "Made-up release notes for layout review from v$currentVersionName.\n\n" +
                     "- A calmer insights breakdown\n" +
                     "- Quieter reminder scheduling\n" +
                     "- Bug fixes",
                 releaseUrl = "https://github.com/iseppe/energy-accounting/releases",
                 apkUrl = "",
-                apkAssetName = "empathie-energy-accounting-v$next.apk",
+                apkAssetName = "energy-accounting-v$next.apk",
                 apkSizeBytes = 0L,
                 apkSha256 = "",
             ),
