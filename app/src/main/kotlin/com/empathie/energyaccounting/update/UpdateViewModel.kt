@@ -8,11 +8,18 @@ import com.empathie.energyaccounting.data.settings.AppSettings
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Everything the update dialog needs to render. */
 sealed interface UpdateUiState {
@@ -46,8 +53,10 @@ sealed interface UpdateCheckStatus {
  *
  * The ViewModel is deliberately UI-free: it owns the state machine and delegates every network,
  * verification and install action to its collaborators, which keeps the whole flow testable
- * without an Activity. A [Job] is kept for the download so [cancelDownload] can stop it and its
- * coroutine cleanup can remove the partially written file.
+ * without an Activity. Network and file work is confined to [ioDispatcher]; only state
+ * publication and the final installer launch happen on Main. Jobs are kept so a check or
+ * download can be cancelled, and a download token keeps a stale coroutine from overwriting the
+ * state of a newer download.
  */
 class UpdateViewModel(
     private val source: ReleaseSource,
@@ -59,6 +68,7 @@ class UpdateViewModel(
     private val currentVersionName: String,
     private val isReleaseBuild: Boolean,
     private val now: () -> Long = System::currentTimeMillis,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
 
     private val updatesDir = File(cacheDir, UPDATES_DIRECTORY)
@@ -72,10 +82,12 @@ class UpdateViewModel(
     private val _checksEnabled = MutableStateFlow(settings.updateChecksEnabled())
     val checksEnabled: StateFlow<Boolean> = _checksEnabled.asStateFlow()
 
+    private var checkJob: Job? = null
     private var downloadJob: Job? = null
+    private var downloadToken = 0
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(ioDispatcher) {
             updatesDir.mkdirs()
             cleanUpdatesDirectory(removePartFiles = true)
         }
@@ -114,48 +126,67 @@ class UpdateViewModel(
 
     private fun check(manual: Boolean) {
         _checkStatus.value = UpdateCheckStatus.Checking
-        viewModelScope.launch {
-            try {
-                val info = source.latestRelease()
-                // Only a successful response (including "no releases yet") resets the throttle.
-                settings.setLastUpdateCheckEpochMillis(now())
-                when {
-                    info == null || info.version <= currentVersion -> {
-                        _checkStatus.value = UpdateCheckStatus.UpToDate
-                        _state.value = UpdateUiState.Idle
-                    }
+        // LAZY so the job is stored before an unconfined dispatcher can run the body; that keeps
+        // setChecksEnabled(false) able to cancel a check that starts synchronously.
+        val job = viewModelScope.launch(start = CoroutineStart.LAZY) {
+            runCheck(manual)
+        }
+        checkJob = job
+        job.start()
+    }
 
-                    !manual && UpdatePolicy.isSnoozed(
-                        version = info.version.toString(),
-                        snoozedVersion = settings.snoozedUpdateVersion(),
-                        snoozedUntil = settings.snoozedUpdateUntilEpochMillis(),
-                        now = now(),
-                    ) -> {
-                        _checkStatus.value = UpdateCheckStatus.Idle
-                        _state.value = UpdateUiState.Idle
-                    }
+    private suspend fun runCheck(manual: Boolean) {
+        try {
+            val info = source.latestRelease()
+            currentCoroutineContext().ensureActive()
+            if (!_checksEnabled.value) {
+                _checkStatus.value = UpdateCheckStatus.Idle
+                _state.value = UpdateUiState.Idle
+                return
+            }
+            // Only a successful response (including "no releases yet") resets the throttle.
+            settings.setLastUpdateCheckEpochMillis(now())
+            when {
+                info == null || info.version <= currentVersion -> {
+                    _checkStatus.value = UpdateCheckStatus.UpToDate
+                    _state.value = UpdateUiState.Idle
+                }
 
-                    else -> {
-                        _checkStatus.value = UpdateCheckStatus.Idle
-                        _state.value = UpdateUiState.Available(info)
+                !manual && UpdatePolicy.isSnoozed(
+                    version = info.version.toString(),
+                    snoozedVersion = settings.snoozedUpdateVersion(),
+                    snoozedUntil = settings.snoozedUpdateUntilEpochMillis(),
+                    now = now(),
+                ) -> {
+                    _checkStatus.value = UpdateCheckStatus.Idle
+                    _state.value = UpdateUiState.Idle
+                }
+
+                else -> {
+                    _checkStatus.value = UpdateCheckStatus.Idle
+                    // Checks may have been switched off while the request was in flight; never
+                    // reopen the dialog after the user asked them to stop.
+                    _state.value = if (_checksEnabled.value) {
+                        UpdateUiState.Available(info)
+                    } else {
+                        UpdateUiState.Idle
                     }
                 }
-            } catch (e: CancellationException) {
-                _checkStatus.value = UpdateCheckStatus.Idle
-                throw e
-            } catch (_: Exception) {
-                // Never a dialog for a failed check: only the card's result line changes.
-                _checkStatus.value = UpdateCheckStatus.Failed
-                _state.value = UpdateUiState.Idle
             }
+        } catch (e: CancellationException) {
+            _checkStatus.value = UpdateCheckStatus.Idle
+            throw e
+        } catch (_: Exception) {
+            // Never a dialog for a failed check: only the card's result line changes.
+            _checkStatus.value = UpdateCheckStatus.Failed
+            _state.value = UpdateUiState.Idle
         }
     }
 
     /** "Later": hide this version for a day, then dismiss. */
     fun onLater() {
         val info = _state.value.infoOrNull()
-        downloadJob?.cancel()
-        downloadJob = null
+        invalidateDownload()
         if (info != null) {
             settings.snoozeUpdate(
                 version = info.version.toString(),
@@ -181,11 +212,12 @@ class UpdateViewModel(
         startDownload(info)
     }
 
-    /** Cancel button during a download: stop the job, let its cleanup delete the `.part`, go idle. */
+    /** Cancel button during a download: stop the job, let its cleanup delete the files, go idle. */
     fun cancelDownload() {
-        downloadJob?.cancel()
-        downloadJob = null
-        if (_state.value is UpdateUiState.Downloading || _state.value is UpdateUiState.Verifying) {
+        val wasDownloading = _state.value is UpdateUiState.Downloading ||
+            _state.value is UpdateUiState.Verifying
+        invalidateDownload()
+        if (wasDownloading) {
             _state.value = UpdateUiState.Idle
         }
     }
@@ -217,8 +249,10 @@ class UpdateViewModel(
         settings.setUpdateChecksEnabled(enabled)
         _checksEnabled.value = enabled
         if (!enabled) {
-            downloadJob?.cancel()
-            downloadJob = null
+            checkJob?.cancel()
+            checkJob = null
+            invalidateDownload()
+            _checkStatus.value = UpdateCheckStatus.Idle
             _state.value = UpdateUiState.Idle
         }
     }
@@ -230,6 +264,8 @@ class UpdateViewModel(
 
     /** Developer Mode preview: fabricated data, and a blank URL so it can never download. */
     fun showDebugDialog() {
+        // Never replace the progress of a real download with a preview.
+        if (downloadJob?.isActive == true) return
         val next = SemanticVersion(
             major = currentVersion.major,
             minor = currentVersion.minor,
@@ -255,36 +291,61 @@ class UpdateViewModel(
 
     private fun startDownload(info: UpdateInfo) {
         if (downloadJob?.isActive == true) return
-        updatesDir.mkdirs()
-        if (updatesDir.usableSpace < info.apkSizeBytes * 2) {
-            _state.value = UpdateUiState.Error(info, error = null, kind = UpdateError.STORAGE)
-            return
-        }
-
-        cleanUpdatesDirectory(removePartFiles = true)
-        val part = File(updatesDir, "${info.apkAssetName}.part")
-        val target = File(updatesDir, info.apkAssetName)
+        val token = downloadToken + 1
+        downloadToken = token
         _state.value = UpdateUiState.Downloading(info, downloaded = 0L, total = info.apkSizeBytes)
-        downloadJob = viewModelScope.launch {
-            download(info, part, target)
+        // LAZY so cancelDownload can always reach this job, even with an unconfined dispatcher.
+        val job = viewModelScope.launch(start = CoroutineStart.LAZY) {
+            download(info, token)
         }
+        downloadJob = job
+        job.start()
     }
 
-    private suspend fun download(info: UpdateInfo, part: File, target: File) {
+    private suspend fun download(info: UpdateInfo, token: Int) {
+        val fileName = cacheFileName(info.apkAssetName)
+        val part = File(updatesDir, "$fileName$PART_SUFFIX")
+        val target = File(updatesDir, fileName)
         try {
-            source.downloadApk(info, part) { downloaded, total ->
-                _state.value = UpdateUiState.Downloading(info, downloaded, total)
+            val hasSpace = withContext(ioDispatcher) {
+                updatesDir.mkdirs()
+                cleanUpdatesDirectory(removePartFiles = true)
+                updatesDir.usableSpace >= info.apkSizeBytes * 2
             }
-            target.delete()
-            if (!part.renameTo(target)) {
-                throw IOException("Could not finalize ${info.apkAssetName}")
+            if (!hasSpace) {
+                publishDownloadState(
+                    token,
+                    UpdateUiState.Error(info, error = null, kind = UpdateError.STORAGE),
+                )
+                return
             }
-            _state.value = UpdateUiState.Verifying(info)
 
-            when (val result = verifier.verify(target, info.apkSha256, BuildConfig.APPLICATION_ID)) {
+            source.downloadApk(info, part) { downloaded, total ->
+                publishDownloadState(token, UpdateUiState.Downloading(info, downloaded, total))
+            }
+            currentCoroutineContext().ensureActive()
+
+            withContext(ioDispatcher) {
+                target.delete()
+                if (!part.renameTo(target)) {
+                    throw StorageException("Could not finalize ${info.apkAssetName}")
+                }
+            }
+            currentCoroutineContext().ensureActive()
+
+            publishDownloadState(token, UpdateUiState.Verifying(info))
+            val result = withContext(ioDispatcher) {
+                verifier.verify(target, info.apkSha256, BuildConfig.APPLICATION_ID)
+            }
+            currentCoroutineContext().ensureActive()
+
+            when (result) {
                 is VerificationResult.Invalid -> {
-                    target.delete()
-                    _state.value = UpdateUiState.Error(info, result.error, UpdateError.UNKNOWN)
+                    withContext(ioDispatcher) { target.delete() }
+                    publishDownloadState(
+                        token,
+                        UpdateUiState.Error(info, result.error, UpdateError.UNKNOWN),
+                    )
                 }
 
                 VerificationResult.Valid -> {
@@ -293,30 +354,79 @@ class UpdateViewModel(
                         version = info.version.toString(),
                         untilEpochMillis = now() + UpdatePolicy.SNOOZE_INTERVAL_MS,
                     )
-                    _state.value = UpdateUiState.Installing(info)
+                    publishDownloadState(token, UpdateUiState.Installing(info))
+                    currentCoroutineContext().ensureActive()
                     try {
                         installer.install(target)
                     } catch (_: Exception) {
-                        _state.value = UpdateUiState.Error(info, error = null, kind = UpdateError.INSTALLER)
+                        publishDownloadState(
+                            token,
+                            UpdateUiState.Error(info, error = null, kind = UpdateError.INSTALLER),
+                        )
                         return
                     }
-                    _state.value = UpdateUiState.Idle
+                    publishDownloadState(token, UpdateUiState.Idle)
                 }
             }
         } catch (e: CancellationException) {
-            part.delete()
-            _state.value = UpdateUiState.Idle
+            deleteDownloadFiles(part, target)
+            if (token == downloadToken) {
+                _state.value = UpdateUiState.Idle
+            }
             throw e
+        } catch (_: StorageException) {
+            deleteDownloadFiles(part, target)
+            publishDownloadState(
+                token,
+                UpdateUiState.Error(info, error = null, kind = UpdateError.STORAGE),
+            )
         } catch (_: ActivityNotFoundException) {
-            part.delete()
-            _state.value = UpdateUiState.Error(info, error = null, kind = UpdateError.INSTALLER)
+            deleteDownloadFiles(part, target)
+            publishDownloadState(
+                token,
+                UpdateUiState.Error(info, error = null, kind = UpdateError.INSTALLER),
+            )
         } catch (_: IOException) {
-            part.delete()
-            _state.value = UpdateUiState.Error(info, error = null, kind = UpdateError.NETWORK)
+            deleteDownloadFiles(part, target)
+            publishDownloadState(
+                token,
+                UpdateUiState.Error(info, error = null, kind = UpdateError.NETWORK),
+            )
         } catch (_: Exception) {
-            part.delete()
-            _state.value = UpdateUiState.Error(info, error = null, kind = UpdateError.UNKNOWN)
+            deleteDownloadFiles(part, target)
+            publishDownloadState(
+                token,
+                UpdateUiState.Error(info, error = null, kind = UpdateError.UNKNOWN),
+            )
         }
+    }
+
+    /** Only the newest download may publish; an old cancelled job must not replace its state. */
+    private fun publishDownloadState(token: Int, newState: UpdateUiState) {
+        if (token == downloadToken) {
+            _state.value = newState
+        }
+    }
+
+    /** Invalidate the current download and stop it; its cleanup still deletes the files. */
+    private fun invalidateDownload() {
+        downloadToken++
+        downloadJob?.cancel()
+        downloadJob = null
+    }
+
+    private suspend fun deleteDownloadFiles(vararg files: File) {
+        withContext(NonCancellable) {
+            withContext(ioDispatcher) {
+                files.forEach { it.delete() }
+            }
+        }
+    }
+
+    private fun cacheFileName(assetName: String): String {
+        // Release metadata is untrusted input: never let it escape the updates directory.
+        val name = assetName.substringAfterLast('/').substringAfterLast('\\').trim()
+        return if (name.isEmpty() || name == "." || name == "..") FALLBACK_APK_NAME else name
     }
 
     private fun hasSnoozeJustExpired(): Boolean {
@@ -360,5 +470,9 @@ class UpdateViewModel(
     private companion object {
         const val UPDATES_DIRECTORY = "updates"
         const val PART_SUFFIX = ".part"
+        const val FALLBACK_APK_NAME = "update.apk"
     }
 }
+
+/** A filesystem problem while finalizing a download, reported as a storage error. */
+private class StorageException(message: String) : IOException(message)

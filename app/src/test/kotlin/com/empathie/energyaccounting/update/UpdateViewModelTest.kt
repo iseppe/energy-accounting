@@ -1,5 +1,6 @@
 package com.empathie.energyaccounting.update
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
@@ -13,6 +14,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -288,6 +290,9 @@ class UpdateViewModelTest {
         assertTrue(viewModel.state.value is UpdateUiState.Downloading)
         assertTrue(part.exists())
 
+        viewModel.showDebugDialog()
+        assertTrue(viewModel.state.value is UpdateUiState.Downloading)
+
         viewModel.cancelDownload()
         advanceUntilIdle()
 
@@ -389,7 +394,169 @@ class UpdateViewModelTest {
         assertTrue(viewModel.state.value is UpdateUiState.Idle)
     }
 
-    private fun newViewModel(
+    @Test
+    fun `cancel while verifying deletes the APK and never installs`() = runTest {
+        val source = FakeReleaseSource(release = updateInfo())
+        val verifier = FakeVerifier()
+        val installer = FakeInstaller()
+        val viewModel = newViewModel(source, verifier, installer)
+        verifier.duringVerify = { viewModel.cancelDownload() }
+
+        viewModel.checkNow()
+        advanceUntilIdle()
+        viewModel.onUpdate()
+        advanceUntilIdle()
+
+        assertEquals(1, source.downloadCalls)
+        assertNotNull(verifier.seen)
+        assertNull(installer.installed)
+        assertTrue(viewModel.state.value is UpdateUiState.Idle)
+        assertFalse(File(cacheDir, "updates/app.apk").exists())
+        assertFalse(File(cacheDir, "updates/app.apk.part").exists())
+    }
+
+    @Test
+    fun `snooze expiry forces one check only`() = runTest {
+        settings.setLastUpdateCheckEpochMillis(now - 60_000)
+        settings.snoozeUpdate("0.4.0", now - 30_000)
+        val source = FakeReleaseSource(release = updateInfo())
+
+        val first = newViewModel(source)
+        first.checkOnLaunch()
+        advanceUntilIdle()
+        assertEquals(1, source.latestCalls)
+        assertTrue(first.state.value is UpdateUiState.Available)
+
+        now += 3_600_000
+        val second = newViewModel(source)
+        second.checkOnLaunch()
+        advanceUntilIdle()
+
+        assertEquals(1, source.latestCalls)
+        assertTrue(second.state.value is UpdateUiState.Idle)
+    }
+
+    @Test
+    fun `insufficient space reports a storage error`() = runTest {
+        val bigInfo = updateInfo().copy(apkSizeBytes = Long.MAX_VALUE / 2)
+        val source = FakeReleaseSource(release = bigInfo)
+        val installer = FakeInstaller()
+        val viewModel = newViewModel(source, installer = installer)
+
+        viewModel.checkNow()
+        advanceUntilIdle()
+        viewModel.onUpdate()
+        advanceUntilIdle()
+
+        val state = viewModel.state.value
+        assertTrue(state is UpdateUiState.Error)
+        assertEquals(UpdateError.STORAGE, (state as UpdateUiState.Error).kind)
+        assertEquals(0, source.downloadCalls)
+        assertNull(installer.installed)
+    }
+
+    @Test
+    fun `a failure to finalize the download reports a storage error`() = runTest {
+        val blocker = File(cacheDir, "updates/app.apk/blocker").apply {
+            parentFile?.mkdirs()
+            writeText("keep")
+        }
+        val source = FakeReleaseSource(release = updateInfo())
+        val installer = FakeInstaller()
+        val viewModel = newViewModel(source, installer = installer)
+
+        viewModel.checkNow()
+        advanceUntilIdle()
+        viewModel.onUpdate()
+        advanceUntilIdle()
+
+        val state = viewModel.state.value
+        assertTrue(state is UpdateUiState.Error)
+        assertEquals(UpdateError.STORAGE, (state as UpdateUiState.Error).kind)
+        assertTrue(blocker.exists())
+        assertFalse(File(cacheDir, "updates/app.apk.part").exists())
+        assertNull(installer.installed)
+    }
+
+    @Test
+    fun `an installer failure shows the installer error`() = runTest {
+        val source = FakeReleaseSource(release = updateInfo())
+        val installer = FakeInstaller(canInstallValue = true).apply {
+            installError = ActivityNotFoundException("No installer")
+        }
+        val viewModel = newViewModel(source, installer = installer)
+
+        viewModel.checkNow()
+        advanceUntilIdle()
+        viewModel.onUpdate()
+        advanceUntilIdle()
+
+        val state = viewModel.state.value
+        assertTrue(state is UpdateUiState.Error)
+        assertEquals(UpdateError.INSTALLER, (state as UpdateUiState.Error).kind)
+        assertNull(installer.installed)
+    }
+
+    @Test
+    fun `a download failure shows a network error and deletes the part`() = runTest {
+        val source = FakeReleaseSource(release = updateInfo()).apply {
+            downloadError = IOException("connection reset")
+        }
+        val installer = FakeInstaller()
+        val viewModel = newViewModel(source, installer = installer)
+
+        viewModel.checkNow()
+        advanceUntilIdle()
+        viewModel.onUpdate()
+        advanceUntilIdle()
+
+        val state = viewModel.state.value
+        assertTrue(state is UpdateUiState.Error)
+        assertEquals(UpdateError.NETWORK, (state as UpdateUiState.Error).kind)
+        assertFalse(File(cacheDir, "updates/app.apk.part").exists())
+        assertFalse(File(cacheDir, "updates/app.apk").exists())
+        assertNull(installer.installed)
+    }
+
+    @Test
+    fun `disabling checks cancels a download and deletes the part`() = runTest {
+        val source = FakeReleaseSource(release = updateInfo(), hangDownload = true)
+        val installer = FakeInstaller()
+        val viewModel = newViewModel(source, installer = installer)
+
+        viewModel.checkNow()
+        advanceUntilIdle()
+        viewModel.onUpdate()
+        val part = File(cacheDir, "updates/app.apk.part")
+        assertTrue(part.exists())
+
+        viewModel.setChecksEnabled(false)
+        advanceUntilIdle()
+
+        assertFalse(part.exists())
+        assertFalse(File(cacheDir, "updates/app.apk").exists())
+        assertTrue(viewModel.state.value is UpdateUiState.Idle)
+        assertFalse(settings.updateChecksEnabled())
+        assertNull(installer.installed)
+    }
+
+    @Test
+    fun `disabling checks cancels a check in flight`() = runTest {
+        val source = FakeReleaseSource(release = updateInfo(), hangCheck = true)
+        val viewModel = newViewModel(source)
+
+        viewModel.checkNow()
+        assertEquals(UpdateCheckStatus.Checking, viewModel.checkStatus.value)
+
+        viewModel.setChecksEnabled(false)
+        advanceUntilIdle()
+
+        assertEquals(UpdateCheckStatus.Idle, viewModel.checkStatus.value)
+        assertTrue(viewModel.state.value is UpdateUiState.Idle)
+        assertEquals(1, source.latestCalls)
+    }
+
+    private fun TestScope.newViewModel(
         source: FakeReleaseSource,
         verifier: FakeVerifier = FakeVerifier(),
         installer: FakeInstaller = FakeInstaller(),
@@ -404,6 +571,7 @@ class UpdateViewModelTest {
         currentVersionName = "0.3.0",
         isReleaseBuild = releaseBuild,
         now = { now },
+        ioDispatcher = UnconfinedTestDispatcher(testScheduler),
     ).also { viewModels += it }
 
     private fun updateInfo(version: SemanticVersion = SemanticVersion(0, 4, 0)) = UpdateInfo(
@@ -422,12 +590,15 @@ class UpdateViewModelTest {
         var release: UpdateInfo? = null,
         var error: Exception? = null,
         var hangDownload: Boolean = false,
+        var hangCheck: Boolean = false,
     ) : ReleaseSource {
         var latestCalls = 0
         var downloadCalls = 0
+        var downloadError: Exception? = null
 
         override suspend fun latestRelease(): UpdateInfo? {
             latestCalls++
+            if (hangCheck) awaitCancellation()
             error?.let { throw it }
             return release
         }
@@ -439,6 +610,7 @@ class UpdateViewModelTest {
         ) {
             downloadCalls++
             destination.writeBytes(byteArrayOf(1, 2, 3))
+            downloadError?.let { throw it }
             onProgress(1L, info.apkSizeBytes)
             if (hangDownload) awaitCancellation()
             onProgress(3L, info.apkSizeBytes)
@@ -451,6 +623,7 @@ class UpdateViewModelTest {
         var seen: File? = null
         var seenSha256: String? = null
         var seenPackageName: String? = null
+        var duringVerify: (() -> Unit)? = null
 
         override fun verify(
             apk: File,
@@ -460,6 +633,7 @@ class UpdateViewModelTest {
             seen = apk
             seenSha256 = expectedSha256
             seenPackageName = expectedPackageName
+            duringVerify?.invoke()
             return result
         }
     }
@@ -467,6 +641,7 @@ class UpdateViewModelTest {
     private class FakeInstaller(var canInstallValue: Boolean = true) : ApkInstaller {
         var installed: File? = null
         var openedSettings = 0
+        var installError: Exception? = null
 
         override fun canInstall(): Boolean = canInstallValue
 
@@ -475,6 +650,7 @@ class UpdateViewModelTest {
         }
 
         override fun install(apk: File) {
+            installError?.let { throw it }
             installed = apk
         }
     }
