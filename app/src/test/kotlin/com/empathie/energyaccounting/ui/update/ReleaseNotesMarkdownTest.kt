@@ -1,6 +1,7 @@
 package com.empathie.energyaccounting.ui.update
 
 import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -39,6 +40,16 @@ class ReleaseNotesMarkdownTest {
         val paragraph = blocks[3] as ReleaseNoteBlock.Paragraph
         assertTrue(paragraph.text.startsWith("The dialog should show **formatted** notes"))
         assertTrue(blocks.none { it is ReleaseNoteBlock.Heading && it.level == 1 })
+    }
+
+    @Test
+    fun `renders inline code without backticks`() {
+        val annotated = renderInlineMarkdown("Verify `SHA256SUMS` before installing.")
+
+        assertEquals("Verify SHA256SUMS before installing.", annotated.text)
+        assertTrue(
+            annotated.spanStyles.any { it.item.fontFamily == FontFamily.Monospace }
+        )
     }
 
     @Test

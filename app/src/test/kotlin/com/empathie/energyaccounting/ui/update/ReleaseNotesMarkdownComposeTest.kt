@@ -21,6 +21,8 @@ class ReleaseNotesMarkdownComposeTest {
 
         - **Why the icon was missing** — the old vector failed to inflate.
         - **Verified by drawing it** — the test now draws the icon.
+
+        Verify `SHA256SUMS` before installing.
     """.trimIndent()
 
     @Test
@@ -35,5 +37,6 @@ class ReleaseNotesMarkdownComposeTest {
         compose.onNodeWithText("Why the icon was missing", substring = true).assertExists()
         compose.onNodeWithText("# Energy Accounting", substring = true).assertDoesNotExist()
         compose.onNodeWithText("**", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("`", substring = true).assertDoesNotExist()
     }
 }

@@ -19,6 +19,7 @@ import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
@@ -114,7 +115,8 @@ internal fun renderInlineMarkdown(
     while (index < text.length) {
         val boldStart = text.indexOf("**", index)
         val linkStart = text.indexOf('[', index)
-        val next = listOf(boldStart, linkStart)
+        val codeStart = text.indexOf('`', index)
+        val next = listOf(boldStart, linkStart, codeStart)
             .filter { it >= 0 }
             .minOrNull()
         if (next == null) {
@@ -133,6 +135,16 @@ internal fun renderInlineMarkdown(
             append(text.substring(boldStart + 2, boldEnd))
             pop()
             index = boldEnd + 2
+        } else if (next == codeStart) {
+            val codeEnd = text.indexOf('`', codeStart + 1)
+            if (codeEnd < 0) {
+                append(text.substring(codeStart))
+                break
+            }
+            pushStyle(SpanStyle(fontFamily = FontFamily.Monospace))
+            append(text.substring(codeStart + 1, codeEnd))
+            pop()
+            index = codeEnd + 1
         } else {
             val labelEnd = text.indexOf(']', linkStart + 1)
             val urlStart = if (labelEnd >= 0) text.indexOf('(', labelEnd + 1) else -1
