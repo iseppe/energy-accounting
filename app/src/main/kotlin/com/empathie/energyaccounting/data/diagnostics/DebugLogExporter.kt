@@ -29,7 +29,7 @@ class DebugLogExporter(private val db: EnergyAccountingDatabase) {
         val reminders = dao.getReminderSchedules()
 
         return buildString {
-            appendLine("Empathie Energy Accounting - debug log")
+            appendLine("Energy Accounting - debug log")
             appendLine("Build: $buildId")
             appendLine("Package: $packageName")
             appendLine("Version: $versionName ($versionCode)")

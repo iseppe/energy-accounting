@@ -64,13 +64,15 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | sed -n '1p'
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" \
             | grep -F "versionCode='$APP_VERSION_CODE' versionName='$APP_VERSION'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" \
+            | grep -qE "application-icon-(160|240|320):"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$APK" \
             | tee "$RUNNER_TEMP/apksigner-certs.txt"
           # Public release certificate. Fails the build if an accidental key change ships.
           grep -Fi "certificate SHA-256 digest: 27443856c29d1aeea4db0492eed2e933174b30b63e1abc90e117557d3535b442" \
             "$RUNNER_TEMP/apksigner-certs.txt"
           mkdir -p dist
-          cp "$APK" "dist/empathie-energy-accounting-v$APP_VERSION.apk"
+          cp "$APK" "dist/energy-accounting-v$APP_VERSION.apk"
           (cd dist && sha256sum *.apk > SHA256SUMS)
       - name: Create GitHub release
         env:
@@ -82,7 +84,7 @@ jobs:
             NOTES_ARGS=(--notes-file "docs/release-notes/$GITHUB_REF_NAME.md")
           fi
           gh release create "$GITHUB_REF_NAME" \
-            --title "Empathie Energy Accounting $GITHUB_REF_NAME" \
+            --title "Energy Accounting $GITHUB_REF_NAME" \
             "${NOTES_ARGS[@]}" \
-            "dist/empathie-energy-accounting-v$APP_VERSION.apk" \
+            "dist/energy-accounting-v$APP_VERSION.apk" \
             "dist/SHA256SUMS"
