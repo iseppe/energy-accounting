@@ -108,6 +108,34 @@ class UpdateViewModelTest {
     }
 
     @Test
+    fun `manual check still works when automatic checks are off`() = runTest {
+        settings.setUpdateChecksEnabled(false)
+        val source = FakeReleaseSource(release = updateInfo())
+        val viewModel = newViewModel(source)
+
+        viewModel.checkNow()
+        advanceUntilIdle()
+
+        assertEquals(1, source.latestCalls)
+        val state = viewModel.state.value
+        assertTrue(state is UpdateUiState.Available)
+        assertEquals(SemanticVersion(0, 4, 0), (state as UpdateUiState.Available).info.version)
+        assertFalse(settings.updateChecksEnabled())
+    }
+
+    @Test
+    fun `debug builds never check manually either`() = runTest {
+        val source = FakeReleaseSource(release = updateInfo())
+        val viewModel = newViewModel(source, releaseBuild = false)
+
+        viewModel.checkNow()
+        advanceUntilIdle()
+
+        assertEquals(0, source.latestCalls)
+        assertTrue(viewModel.state.value is UpdateUiState.Idle)
+    }
+
+    @Test
     fun `automatic check is throttled inside 24 hours`() = runTest {
         settings.setLastUpdateCheckEpochMillis(now - 60_000)
         val source = FakeReleaseSource(release = updateInfo())

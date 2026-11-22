@@ -84,7 +84,15 @@ class UpdateViewModel(
 
     private var checkJob: Job? = null
     private var downloadJob: Job? = null
+
+    @Volatile
     private var downloadToken = 0
+
+    // Which download currently owns the shared <asset>.part / <asset>.apk paths. Cancelling an
+    // old download invalidates downloadToken but not this, so its cleanup can still delete its
+    // files unless a newer download has taken the paths over.
+    @Volatile
+    private var fileOwnerToken = 0
 
     init {
         viewModelScope.launch(ioDispatcher) {
@@ -119,6 +127,7 @@ class UpdateViewModel(
 
     /** The "Check now" button: always checks, even inside the 24-hour throttle. */
     fun checkNow() {
+        if (!isReleaseBuild) return
         if (_checkStatus.value == UpdateCheckStatus.Checking) return
         if (_state.value.isPromptShowing() || _state.value.isDownloadInProgress()) return
         check(manual = true)
@@ -139,7 +148,9 @@ class UpdateViewModel(
         try {
             val info = source.latestRelease()
             currentCoroutineContext().ensureActive()
-            if (!_checksEnabled.value) {
+            // A manual check still works after the automatic switch is turned off; only an
+            // automatic check that was superseded by the disable is dropped.
+            if (!manual && !_checksEnabled.value) {
                 _checkStatus.value = UpdateCheckStatus.Idle
                 _state.value = UpdateUiState.Idle
                 return
@@ -164,9 +175,9 @@ class UpdateViewModel(
 
                 else -> {
                     _checkStatus.value = UpdateCheckStatus.Idle
-                    // Checks may have been switched off while the request was in flight; never
-                    // reopen the dialog after the user asked them to stop.
-                    _state.value = if (_checksEnabled.value) {
+                    // An automatic check must not reopen the dialog after the user switched
+                    // checks off; a manual tap is still an explicit request to see the result.
+                    _state.value = if (manual || _checksEnabled.value) {
                         UpdateUiState.Available(info)
                     } else {
                         UpdateUiState.Idle
@@ -293,7 +304,7 @@ class UpdateViewModel(
         if (downloadJob?.isActive == true) return
         val token = downloadToken + 1
         downloadToken = token
-        _state.value = UpdateUiState.Downloading(info, downloaded = 0L, total = info.apkSizeBytes)
+        fileOwnerToken = token
         // LAZY so cancelDownload can always reach this job, even with an unconfined dispatcher.
         val job = viewModelScope.launch(start = CoroutineStart.LAZY) {
             download(info, token)
@@ -320,6 +331,11 @@ class UpdateViewModel(
                 return
             }
 
+            // Publish only after the pre-check so a storage failure never flashes "Downloading 0%".
+            publishDownloadState(
+                token,
+                UpdateUiState.Downloading(info, downloaded = 0L, total = info.apkSizeBytes),
+            )
             source.downloadApk(info, part) { downloaded, total ->
                 publishDownloadState(token, UpdateUiState.Downloading(info, downloaded, total))
             }
@@ -341,7 +357,9 @@ class UpdateViewModel(
 
             when (result) {
                 is VerificationResult.Invalid -> {
-                    withContext(ioDispatcher) { target.delete() }
+                    withContext(ioDispatcher) {
+                        if (token == fileOwnerToken) target.delete()
+                    }
                     publishDownloadState(
                         token,
                         UpdateUiState.Error(info, result.error, UpdateError.UNKNOWN),
@@ -369,31 +387,31 @@ class UpdateViewModel(
                 }
             }
         } catch (e: CancellationException) {
-            deleteDownloadFiles(part, target)
+            deleteDownloadFiles(token, part, target)
             if (token == downloadToken) {
                 _state.value = UpdateUiState.Idle
             }
             throw e
         } catch (_: StorageException) {
-            deleteDownloadFiles(part, target)
+            deleteDownloadFiles(token, part, target)
             publishDownloadState(
                 token,
                 UpdateUiState.Error(info, error = null, kind = UpdateError.STORAGE),
             )
         } catch (_: ActivityNotFoundException) {
-            deleteDownloadFiles(part, target)
+            deleteDownloadFiles(token, part, target)
             publishDownloadState(
                 token,
                 UpdateUiState.Error(info, error = null, kind = UpdateError.INSTALLER),
             )
         } catch (_: IOException) {
-            deleteDownloadFiles(part, target)
+            deleteDownloadFiles(token, part, target)
             publishDownloadState(
                 token,
                 UpdateUiState.Error(info, error = null, kind = UpdateError.NETWORK),
             )
         } catch (_: Exception) {
-            deleteDownloadFiles(part, target)
+            deleteDownloadFiles(token, part, target)
             publishDownloadState(
                 token,
                 UpdateUiState.Error(info, error = null, kind = UpdateError.UNKNOWN),
@@ -415,10 +433,13 @@ class UpdateViewModel(
         downloadJob = null
     }
 
-    private suspend fun deleteDownloadFiles(vararg files: File) {
+    private suspend fun deleteDownloadFiles(token: Int, vararg files: File) {
         withContext(NonCancellable) {
             withContext(ioDispatcher) {
-                files.forEach { it.delete() }
+                // A superseded coroutine must not remove the files a newer download now owns.
+                if (token == fileOwnerToken) {
+                    files.forEach { it.delete() }
+                }
             }
         }
     }
