@@ -92,7 +92,7 @@ Verify the result before shipping anything:
 "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs \
   app/build/outputs/apk/release/app-release.apk
 "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging \
-  app/build/outputs/apk/release/app-release.apk | head -1
+  app/build/outputs/apk/release/app-release.apk | sed -n '1p'
 ```
 
 `apksigner` must report a verified v2 (or newer) signature scheme and the

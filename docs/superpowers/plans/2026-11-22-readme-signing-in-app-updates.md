@@ -532,7 +532,7 @@ export ANDROID_KEY_PASSWORD="$ANDROID_KEYSTORE_PASSWORD"
 "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs \
   app/build/outputs/apk/release/app-release.apk
 "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging \
-  app/build/outputs/apk/release/app-release.apk | head -1
+  app/build/outputs/apk/release/app-release.apk | sed -n '1p'
 ```
 
 Expected: `apksigner` reports verified v1/v2/v3 schemes and the RSA 4096 certificate; `aapt` reports `versionCode='300' versionName='0.3.0'`.
@@ -654,6 +654,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$ANDROID_KEYSTORE_BASE64"
+          umask 077
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
       - name: Derive version from tag
@@ -685,9 +686,9 @@ jobs:
           set -euo pipefail
           APK="app/build/outputs/apk/release/app-release.apk"
           test -f "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | head -1
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | sed -n '1p'
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" \
-            | grep "versionCode='$APP_VERSION_CODE' versionName='$APP_VERSION'"
+            | grep -F "versionCode='$APP_VERSION_CODE' versionName='$APP_VERSION'"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$APK"
           mkdir -p dist
           cp "$APK" "dist/empathie-energy-accounting-v$APP_VERSION.apk"
