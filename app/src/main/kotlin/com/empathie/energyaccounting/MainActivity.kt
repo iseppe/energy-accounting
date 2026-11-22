@@ -1,13 +1,18 @@
 package com.empathie.energyaccounting
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.HapticFeedbackConstants
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -31,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -48,6 +54,7 @@ import com.empathie.energyaccounting.reminder.CheckInReminderReceiver
 import com.empathie.energyaccounting.reminder.ReminderScheduler
 import com.empathie.energyaccounting.ui.common.AppHaptics
 import com.empathie.energyaccounting.ui.common.LocalAppHaptics
+import com.empathie.energyaccounting.ui.common.shouldRequestNotificationPermission
 import com.empathie.energyaccounting.ui.daily.DailyAccountScreen
 import com.empathie.energyaccounting.ui.daily.DailyAccountViewModel
 import com.empathie.energyaccounting.ui.insights.InsightsScreen
@@ -151,8 +158,15 @@ class MainActivity : ComponentActivity() {
 
             val themeMode by manageViewModel.themeMode.collectAsStateWithLifecycle()
             val vibrationEnabled by manageViewModel.vibrationEnabled.collectAsStateWithLifecycle()
+            val reminders by manageViewModel.reminders.collectAsStateWithLifecycle()
             val deepLink by deepLinkEvents.collectAsStateWithLifecycle()
             var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+
+            val requestNotificationPermission = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) {
+                // The reminder section keeps a visible settings path if this is denied.
+            }
 
             val view = LocalView.current
             val haptics = remember(vibrationEnabled) {
@@ -177,6 +191,30 @@ class MainActivity : ComponentActivity() {
                         delay(1_500)
                         updateViewModel.checkOnLaunch()
                     }
+
+                    // Restored reminders can be enabled without a switch toggle, so ask once
+                    // when the reminders flow first shows an enabled reminder and permission is
+                    // still missing.
+                    LaunchedEffect(reminders) {
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return@LaunchedEffect
+                        val granted = ContextCompat.checkSelfPermission(
+                            this@MainActivity,
+                            Manifest.permission.POST_NOTIFICATIONS,
+                        ) == PackageManager.PERMISSION_GRANTED
+                        if (
+                            shouldRequestNotificationPermission(
+                                sdkInt = Build.VERSION.SDK_INT,
+                                permissionGranted = granted,
+                                reminders = reminders,
+                            ) && !app.settings.notificationPermissionPrompted()
+                        ) {
+                            app.settings.setNotificationPermissionPrompted(true)
+                            requestNotificationPermission.launch(
+                                Manifest.permission.POST_NOTIFICATIONS
+                            )
+                        }
+                    }
+
                     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
                         updateViewModel.onResume()
                     }
